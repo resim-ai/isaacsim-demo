@@ -153,6 +153,7 @@ class SetNavigationGoal(Node):
             self.curr_iteration_count += 1
             self.send_goal()
         else:
+            self.get_logger().info("All goals reached.")
             rclpy.shutdown()
 
     def __feedback_callback(self, feedback_msg):

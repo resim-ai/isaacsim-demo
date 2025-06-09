@@ -35,7 +35,7 @@ def generate_launch_description():
             {
                 "map_yaml_path": map_yaml_file,
                 "iteration_count": 3,
-                "goal_generator_type": "RandomGoalGenerator",
+                "goal_generator_type": "GoalReader",
                 "action_server_name": "navigate_to_pose",
                 "obstacle_search_distance_in_meters": 0.2,
                 "goal_text_file_path": goal_text_file,
