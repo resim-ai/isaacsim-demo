@@ -99,7 +99,7 @@ def generate_launch_description():
     )
 
     ld_record_and_start = LaunchDescription(
-        [record_node, TimerAction(period=30.0, actions=[ld_automatic_goal])]
+        [record_node, TimerAction(period=10.0, actions=[ld_automatic_goal])]
     )
 
     def execute_second_node_if_condition_met(event, second_node_action, message):
@@ -194,10 +194,10 @@ def generate_launch_description():
             # Launch recorder and automatic goal generator node when Isaac Sim has finished loading.
             RegisterEventHandler(
                 OnProcessIO(
-                    on_stdout=lambda event: execute_second_node_if_condition_met(
+                    on_stderr=lambda event: execute_second_node_if_condition_met(
                         event,
                         ld_record_and_start,
-                        "Stage loaded and simulation is playing.",
+                        "[local_costmap.local_costmap]: start",
                     )
                 )
             ),
