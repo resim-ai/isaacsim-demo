@@ -1,1 +1,1 @@
-sudo docker build . -f isaac.dockerfile -t isaac-humble-run
+docker build . -f isaac.dockerfile -t isaac-humble-run --target run

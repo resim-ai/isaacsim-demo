@@ -96,7 +96,7 @@ class SetNavigationGoal(Node):
         if not goal_handle.accepted:
             self.get_logger().info("Goal rejected :(")
             rclpy.shutdown()
-            return
+            sys.exit(1)
 
         self.get_logger().info("Goal accepted :)")
 

@@ -11,7 +11,16 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch.actions import RegisterEventHandler, Shutdown
+from launch.event_handlers import OnProcessExit
+from launch.events.process import ProcessExited
+from launch.launch_context import LaunchContext
 
+def exit_handler(event: ProcessExited, context: LaunchContext):
+    if event.returncode == 0:
+        Shutdown(reason="All goals completed.")
+    else:
+        raise RuntimeError("Failed to complete goals.")
 
 def generate_launch_description():
 
@@ -45,4 +54,12 @@ def generate_launch_description():
         output="screen",
     )
 
-    return LaunchDescription([navigation_goal_node])
+    return LaunchDescription([
+        navigation_goal_node,
+        RegisterEventHandler(
+            OnProcessExit(
+                target_action=navigation_goal_node,
+                on_exit=exit_handler
+            )
+        )
+    ])
