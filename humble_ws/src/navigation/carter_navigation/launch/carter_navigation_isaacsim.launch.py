@@ -99,7 +99,7 @@ def generate_launch_description():
     )
 
     ld_record_and_start = LaunchDescription(
-        [record_node, TimerAction(period=0.5, actions=[ld_automatic_goal])]
+        [record_node, TimerAction(period=5.0, actions=[ld_automatic_goal])]
     )
 
     def execute_second_node_if_condition_met(event, second_node_action, message):
@@ -197,7 +197,7 @@ def generate_launch_description():
                     on_stderr=lambda event: execute_second_node_if_condition_met(
                         event,
                         ld_record_and_start,
-                        "[lifecycle_manager_navigation]: Creating bond timer...",
+                        "[global_costmap.global_costmap]: start",
                     )
                 )
             ),
