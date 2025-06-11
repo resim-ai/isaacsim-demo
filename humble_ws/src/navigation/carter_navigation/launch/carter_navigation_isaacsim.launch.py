@@ -5,7 +5,9 @@
 ## distribution of this software and related documentation without an express
 ## license agreement from NVIDIA CORPORATION is strictly prohibited.
 
+import json
 import os
+from pathlib import Path
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
@@ -15,8 +17,17 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch.actions import RegisterEventHandler, ExecuteProcess, Shutdown
-from launch.event_handlers import OnProcessIO, OnIncludeLaunchDescription
+from launch.event_handlers import OnProcessIO
 
+def get_experience_location() -> str:
+    test_config_path = Path("/tmp/resim/test_config.json")
+    if test_config_path.exists():
+        with open(test_config_path, "r") as f:
+            test_config = json.load(f)
+            return test_config["experienceLocation"]
+    else:
+        return os.path.join(get_package_share_directory("isaac_ros_navigation_goal"), "assets", "goals.txt")
+    
 
 def generate_launch_description():
     use_sim_time = LaunchConfiguration("use_sim_time", default="True")
@@ -100,6 +111,7 @@ def generate_launch_description():
         ),
         launch_arguments={
             "use_sim_time": use_sim_time,
+            "goal_text_file_path": get_experience_location()
         }.items(),
     )
 

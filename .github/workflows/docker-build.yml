@@ -1,0 +1,199 @@
+name: Build, Push & Execute Images
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+env:
+  BUILD_REPO_NAME: isaacsim-test-images
+  METRICS_BUILD_REPO_NAME: isaacsim-test-images
+  REGISTRY_NAME: 909785973729.dkr.ecr.us-east-1.amazonaws.com
+  RESIM_PASSWORD: ${{ secrets.RESIM_PASSWORD }}
+  RESIM_USERNAME: ${{ secrets.RESIM_USERNAME }}
+  PROJECT_NAME: isaac-sim
+  SIM_SYSTEM_ID: 30c93c77-9c39-4ac4-bba8-cd11159d41fa
+  SIM_TEST_SUITE: Nav2-Demo-Tests
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  create-new-isaac-sim-build:
+    name: Create New Isaac Sim Build
+    runs-on: ubuntu-latest
+    outputs:
+      build_id: ${{ steps.register_build.outputs.build_id }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.ECR_RW_ROLE }}
+          aws-region: us-east-1
+
+      - name: Log in to ECR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY_NAME }}
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Fetch ReSim CLI
+        run: |
+          curl -L https://github.com/resim-ai/api-client/releases/latest/download/resim-linux-amd64 -o resim-cli
+          chmod +x resim-cli
+      
+      - name: Select Project
+        run: |
+          ./resim-cli projects select $PROJECT_NAME
+
+      - name: Docker metadata
+        id: docker_meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.REGISTRY_NAME }}/${{ env.BUILD_REPO_NAME }}
+          tags: |
+            type=ref,event=branch,prefix=isaac-sim-
+            type=ref,event=pr,prefix=isaac-sim-
+            type=sha,prefix=isaac-sim-
+
+      - name: Docker Build Push
+        id: build-push-build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.docker_meta.outputs.tags }}
+      
+      - name: Determine Branch Name and Commit SHA
+        id: determine_branch_and_sha
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "BRANCH_NAME=${{ env.HEAD_REF }}" >> $GITHUB_ENV
+            echo "COMMIT_SHA=${{ github.event.pull_request.head.sha }}" >> $GITHUB_ENV
+          else
+            echo "BRANCH_NAME=${{ env.REF_NAME }}" >> $GITHUB_ENV
+            echo "COMMIT_SHA=${{ github.sha }}" >> $GITHUB_ENV
+          fi
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          REF_NAME: ${{ github.ref_name }}
+
+      - name: Register Isaac Sim Build in ReSim
+        id: register_build
+        run: |
+          # Get the first tag (SHA tag) from the list of tags
+          export SHA_TAG=$(echo "${{ steps.docker_meta.outputs.tags }}" | tail -n 1)
+          BUILD_ID=$(./resim-cli builds create --system $SIM_SYSTEM_ID --description "A build of the Isaac Sim system" --version "$COMMIT_SHA" --branch "$BRANCH_NAME" --image "$SHA_TAG" --auto-create-branch --github | sed 's/.*=//')
+          echo "BUILD_ID=$BUILD_ID" >> $GITHUB_ENV
+          echo "build_id=$BUILD_ID" >> $GITHUB_OUTPUT
+        env:
+          BRANCH_NAME: ${{ env.BRANCH_NAME }}
+  
+  create-new-isaac-sim-metrics-build:
+    name: Create New Isaac Sim Metrics Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+  
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.ECR_RW_ROLE }}
+          aws-region: us-east-1
+
+      - name: Log in to ECR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY_NAME }}
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Fetch ReSim CLI
+        run: |
+          curl -L https://github.com/resim-ai/api-client/releases/latest/download/resim-linux-amd64 -o resim-cli
+          chmod +x resim-cli
+      
+      - name: Select Project
+        run: |
+          ./resim-cli projects select $PROJECT_NAME
+
+      - name: Check for changes in specific paths
+        id: check_changes
+        run: |
+          git fetch origin ${{ github.base_ref }} --depth=1
+          if git diff --quiet origin/${{ github.base_ref }} HEAD -- src/metrics; then
+            echo "CHANGED=false" >> $GITHUB_ENV
+          else
+            echo "CHANGED=true" >> $GITHUB_ENV
+          fi
+
+      - name: Docker metadata
+        id: docker_meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.REGISTRY_NAME }}/${{ env.METRICS_BUILD_REPO_NAME }}
+          tags: |
+            type=ref,event=branch,prefix=isaac-sim-metrics-
+            type=ref,event=pr,prefix=isaac-sim-metrics-
+            type=sha,prefix=isaac-sim-metrics-
+
+      - name: Docker Build Push
+        id: build-push-build
+        uses: docker/build-push-action@v5
+        with:
+          context: metrics
+          file: ./metrics/Dockerfile
+          push: true
+          tags: ${{ steps.docker_meta.outputs.tags }}
+
+      - name: Determine Commit SHA
+        id: determine_sha
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "COMMIT_SHA=${{ github.event.pull_request.head.sha }}" >> $GITHUB_ENV
+          else
+            echo "COMMIT_SHA=${{ github.sha }}" >> $GITHUB_ENV
+          fi
+
+      - name: Register Metrics Build in ReSim
+        if: env.CHANGED == 'true'
+        run: |
+          # Get the first tag (SHA tag) from the list of tags
+          export SHA_TAG=$(echo "${{ steps.docker_meta.outputs.tags }}" | tail -n 1)
+          METRICS_BUILD_ID=$(./resim-cli metrics-builds create --name "Isaac Sim Metrics Build" --version "$COMMIT_SHA" --image "$SHA_TAG" --systems $SIM_SYSTEM_ID --github | sed 's/.*=//')
+          echo "METRICS_BUILD_ID=$METRICS_BUILD_ID" >> $GITHUB_ENV
+      
+      - name: Update Test Suite
+        if: env.CHANGED == 'true'
+        run: |
+          ./resim-cli suites revise --test-suite "$SIM_TEST_SUITE" --metrics-build "${{ env.METRICS_BUILD_ID }}"
+
+  run-isaac-sim-test-suite:
+    name: Run the Isaac Sim test suite
+    runs-on: ubuntu-latest
+    needs: [create-new-isaac-sim-build, create-new-isaac-sim-metrics-build]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Fetch ReSim CLI
+        run: |
+          curl -L https://github.com/resim-ai/api-client/releases/latest/download/resim-linux-amd64 -o resim-cli
+          chmod +x resim-cli
+      
+      - name: Run Suite
+        run: |
+          echo "Running the Isaac Sim test suite..."
+          BATCH_ID=$(./resim-cli suites run --project "$PROJECT_NAME" --test-suite "$SIM_TEST_SUITE" --github --build-id "${{ needs.create-new-isaac-sim-build.outputs.build_id }}" | sed 's/.*=//')
+          echo "BATCH_ID=$BATCH_ID" >> $GITHUB_ENV

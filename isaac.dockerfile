@@ -35,6 +35,7 @@ RUN rosdep init && \
     rosdep update && \
     rosdep install -i --from-path /humble_ws/src --rosdistro humble -y
 
+COPY goals /goals
 COPY entrypoint.sh /
 
 ENTRYPOINT ["/entrypoint.sh"]
