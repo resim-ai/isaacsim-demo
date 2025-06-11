@@ -23,6 +23,7 @@ def exit_handler(event: ProcessExited, context: LaunchContext):
         raise RuntimeError("Failed to complete goals.")
 
 def generate_launch_description():
+    use_sim_time = LaunchConfiguration("use_sim_time", default=True)
 
     map_yaml_file = LaunchConfiguration(
         "map_yaml_path",
@@ -49,6 +50,7 @@ def generate_launch_description():
                 "obstacle_search_distance_in_meters": 0.2,
                 "goal_text_file_path": goal_text_file,
                 "initial_pose": [-6.4, -1.04, 0.0, 0.0, 0.0, 0.99, 0.02],
+                "use_sim_time": use_sim_time,
             }
         ],
         output="screen",

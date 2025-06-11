@@ -69,7 +69,9 @@ def generate_launch_description():
         "/plan",
         "/front_stereo_camera/left/camera_info",
         "/front_stereo_camera/left/image_raw_throttled",
-        "/chassis/odom"
+        "/chassis/odom",
+        "/initialpose",
+        "/goal"
     ]
 
     record_node = ExecuteProcess(
@@ -94,8 +96,11 @@ def generate_launch_description():
                     "launch",
                     "isaac_ros_navigation_goal.launch.py",
                 ),
-            ],
+            ]
         ),
+        launch_arguments={
+            "use_sim_time": use_sim_time,
+        }.items(),
     )
 
     ld_record_and_start = LaunchDescription(
