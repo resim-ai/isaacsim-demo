@@ -26,6 +26,12 @@ jobs:
     outputs:
       build_id: ${{ steps.register_build.outputs.build_id }}
     steps:
+      - name: Disk Cleanup
+        run: |
+          cd /opt
+          find . -maxdepth 1 -mindepth 1 '!' -path ./containerd '!' -path ./actionarchivecache '!' -path ./runner '!' -path ./runner-cache -exec rm -rf '{}' ';'
+          rm -rf /opt/hostedtoolcache
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -131,7 +137,7 @@ jobs:
         id: check_changes
         run: |
           git fetch origin ${{ github.base_ref }} --depth=1
-          if git diff --quiet origin/${{ github.base_ref }} HEAD -- src/metrics; then
+          if git diff --quiet origin/${{ github.base_ref }} HEAD -- metrics; then
             echo "CHANGED=false" >> $GITHUB_ENV
           else
             echo "CHANGED=true" >> $GITHUB_ENV
