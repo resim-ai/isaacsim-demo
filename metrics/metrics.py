@@ -538,7 +538,7 @@ def add_robot_trajectory_metric(writer: ResimMetricsWriter, input_bag: Path, tra
 
 
 def add_pose_difference_metric(writer: ResimMetricsWriter, input_bag: Path, transform_manager: TransformManager):
-    """Add a metric showing the difference between odometry and AMCL poses (at AMCL timestamps).
+    """Add a metric showing the difference between odometry and AMCL poses (at AMCL timestamps), comparing both in the map frame.
     
     Args:
         writer: Metrics writer instance
@@ -547,7 +547,7 @@ def add_pose_difference_metric(writer: ResimMetricsWriter, input_bag: Path, tran
     """
     from geometry_msgs.msg import PoseWithCovarianceStamped
     
-    logger.info("Collecting odometry and AMCL messages in a single pass...")
+    logger.info("Collecting odometry and AMCL messages in a single pass, transforming odom to map frame...")
     
     timestamps = []
     position_diffs = []
@@ -557,18 +557,30 @@ def add_pose_difference_metric(writer: ResimMetricsWriter, input_bag: Path, tran
     for topic, msg, timestamp in read_messages(str(input_bag), ["/chassis/odom", "/amcl_pose"]):
         if topic == "/chassis/odom":
             latest_odom = msg
-            latest_odom_time = timestamp
         elif topic == "/amcl_pose":
             if latest_odom is not None:
                 amcl_pos = msg.pose.pose.position
-                odom_pos = latest_odom.pose.pose.position
-                pos_diff = np.sqrt(
-                    (amcl_pos.x - odom_pos.x) ** 2 +
-                    (amcl_pos.y - odom_pos.y) ** 2 +
-                    (amcl_pos.z - odom_pos.z) ** 2
-                )
-                timestamps.append(timestamp)
-                position_diffs.append(pos_diff)
+                # Transform odom pose to map frame at this timestamp
+                try:
+                    odom_pose = latest_odom.pose.pose
+                    odom_header = latest_odom.header
+                    odom_in_map = transform_manager.transform_pose(
+                        odom_pose,
+                        target_frame=msg.header.frame_id,
+                        source_frame=odom_header.frame_id,
+                        time=Time(seconds=msg.header.stamp.sec, nanoseconds=msg.header.stamp.nanosec)
+                    )
+                    odom_pos = odom_in_map.position
+                    pos_diff = np.sqrt(
+                        (amcl_pos.x - odom_pos.x) ** 2 +
+                        (amcl_pos.y - odom_pos.y) ** 2 +
+                        (amcl_pos.z - odom_pos.z) ** 2
+                    )
+                    timestamps.append(timestamp)
+                    position_diffs.append(pos_diff)
+                except Exception as e:
+                    logger.warning(f"Could not transform odom pose to map frame or compute difference", exc_info=e)
+                    continue
     
     if not timestamps:
         logger.warning("No pose difference data found")
@@ -601,7 +613,7 @@ def add_pose_difference_metric(writer: ResimMetricsWriter, input_bag: Path, tran
     (
         writer.add_plotly_metric("Localization Error")
         .with_description(
-            "Difference in position between /chassis/odom and /amcl_pose over time."
+            "Difference in position between /chassis/odom (transformed to map frame) and /amcl_pose over time."
         )
         .with_blocking(False)
         .with_plotly_data(str(fig.to_json()))
