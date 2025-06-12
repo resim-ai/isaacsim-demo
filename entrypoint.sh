@@ -1,4 +1,6 @@
 #!/bin/bash
+set -e
+
 source /opt/ros/humble/setup.bash
 source /humble_ws/install/setup.bash
 ros2 launch carter_navigation carter_navigation_isaacsim.launch.py
