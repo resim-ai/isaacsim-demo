@@ -238,7 +238,7 @@ def generate_launch_description():
                 OnProcessIO(
                     on_stderr=lambda event: execute_second_node_if_condition_met(
                         event,
-                        Shutdown(reason="All goals completed."),
+                        TimerAction(period=5.0, actions=[Shutdown(reason="All goals completed.")]),
                         "All goals reached.",
                     )
                 )
