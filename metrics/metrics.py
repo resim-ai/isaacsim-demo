@@ -3,6 +3,7 @@ from enum import Enum
 import json
 import logging
 import sys
+from typing import Sequence
 import uuid
 from pathlib import Path
 import cv2
@@ -30,8 +31,9 @@ from resim.metrics.python.metrics_utils import (
     ResimMetricsOutput,
     MetricImportance,
     MetricStatus,
+    Timestamp,
 )
-from resim.metrics.python.metrics import ExternalFileMetricsData
+from resim.metrics.python.metrics import ExternalFileMetricsData, SeriesMetricsData
 from resim.metrics.python.metrics_writer import ResimMetricsWriter
 import plotly.express as px
 import pandas as pd
@@ -152,6 +154,11 @@ def read_messages(input_bag: str, topics: list[str]):
         msg = rclpy.serialization.deserialize_message(data, msg_type)
         yield topic, msg, timestamp
 
+
+def seconds_array_to_timestamp(seconds: Sequence[float]) -> np.ndarray:
+    return np.array(
+        [Timestamp(secs=int(s), nanos=int((s - int(s)) * 1e9)) for s in seconds]
+    )
 
 class TransformManager:
     """Manages transform collection and normalization for metrics processing."""
@@ -308,6 +315,9 @@ def add_distance_to_goal_metric(writer: ResimMetricsWriter, input_bag: Path, tra
                 line=dict(color=colors[i % len(colors)], width=2)
             )
         )
+        
+        # Add metrics data for this goal
+        add_metrics_data(writer, f"distance_to_goal_{i+1}", times, distances)
     
     # Update layout
     fig.update_layout(
@@ -536,6 +546,21 @@ def add_robot_trajectory_metric(writer: ResimMetricsWriter, input_bag: Path, tra
         .with_status(MetricStatus.PASSED_METRIC_STATUS)
     )
 
+def add_metrics_data(writer: ResimMetricsWriter, name: str, times: Sequence[float], data: Sequence[float]):
+    timestamp_series = SeriesMetricsData(
+        name=f"{name}_timestamps",
+        series=seconds_array_to_timestamp(times),
+        unit="seconds"
+    )
+
+    writer.add_metrics_data(
+        SeriesMetricsData(
+            name=name,
+            series=np.array(data),
+            index_data=timestamp_series,
+            unit="metres",
+        )
+    )
 
 def add_pose_difference_metric(writer: ResimMetricsWriter, input_bag: Path, transform_manager: TransformManager):
     """Add a metric showing the difference between odometry and AMCL poses (at AMCL timestamps), comparing both in the map frame.
@@ -590,6 +615,9 @@ def add_pose_difference_metric(writer: ResimMetricsWriter, input_bag: Path, tran
     fig = go.Figure()
     # Convert timestamps to seconds from start
     times = [(t - timestamps[0]) / 1e9 for t in timestamps]
+
+    add_metrics_data(writer, "pose_difference", times, position_diffs)
+
     # Add position difference trace
     fig.add_trace(
         go.Scatter(
