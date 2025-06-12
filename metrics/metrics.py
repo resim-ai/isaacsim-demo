@@ -53,6 +53,10 @@ class Topics(Enum):
     LOCAL_COSTMAP = "/local_costmap"
     LIDAR = "/hesai/pandar_points"
 
+class FrameIds(Enum):
+    BASE_LINK = "base_link"
+    ODOM = "odom"
+    MAP = "map"
 
 
 def parse_args() -> argparse.Namespace:
@@ -169,8 +173,8 @@ class TransformManager:
             assert isinstance(msg, TFMessage)
             for transform in msg.transforms:
                 # Only collect transforms between odom and map frames
-                if not (transform.header.frame_id in ["odom", "map"] and 
-                       transform.child_frame_id in ["odom", "map"]):
+                if not (transform.header.frame_id in [e.value for e in FrameIds] and 
+                       transform.child_frame_id in [e.value for e in FrameIds]):
                     continue
                 
                 key = (transform.header.frame_id, transform.child_frame_id)
@@ -533,6 +537,79 @@ def add_robot_trajectory_metric(writer: ResimMetricsWriter, input_bag: Path, tra
     )
 
 
+def add_pose_difference_metric(writer: ResimMetricsWriter, input_bag: Path, transform_manager: TransformManager):
+    """Add a metric showing the difference between odometry and AMCL poses (at AMCL timestamps).
+    
+    Args:
+        writer: Metrics writer instance
+        input_bag: Path to the MCAP file
+        transform_manager: Transform manager instance
+    """
+    from geometry_msgs.msg import PoseWithCovarianceStamped
+    
+    logger.info("Collecting odometry and AMCL messages in a single pass...")
+    
+    timestamps = []
+    position_diffs = []
+    latest_odom = None
+    
+    # Single pass: messages are sorted by time
+    for topic, msg, timestamp in read_messages(str(input_bag), ["/chassis/odom", "/amcl_pose"]):
+        if topic == "/chassis/odom":
+            latest_odom = msg
+            latest_odom_time = timestamp
+        elif topic == "/amcl_pose":
+            if latest_odom is not None:
+                amcl_pos = msg.pose.pose.position
+                odom_pos = latest_odom.pose.pose.position
+                pos_diff = np.sqrt(
+                    (amcl_pos.x - odom_pos.x) ** 2 +
+                    (amcl_pos.y - odom_pos.y) ** 2 +
+                    (amcl_pos.z - odom_pos.z) ** 2
+                )
+                timestamps.append(timestamp)
+                position_diffs.append(pos_diff)
+    
+    if not timestamps:
+        logger.warning("No pose difference data found")
+        return
+    
+    # Create plot
+    fig = go.Figure()
+    # Convert timestamps to seconds from start
+    times = [(t - timestamps[0]) / 1e9 for t in timestamps]
+    # Add position difference trace
+    fig.add_trace(
+        go.Scatter(
+            x=times,
+            y=position_diffs,
+            mode='markers+lines',
+            name='Position Difference',
+            line=dict(color='#00ffff', width=2)
+        )
+    )
+    # Update layout
+    fig.update_layout(
+        xaxis=dict(title='Time (s)'),
+        yaxis=dict(title='Position Difference (m)'),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        showlegend=True,
+        legend=dict(orientation="h", y=1.0, x=0.5, xanchor="center", yanchor="bottom")
+    )
+    resim_plotly_style(fig)
+    (
+        writer.add_plotly_metric("Localization Error")
+        .with_description(
+            "Difference in position between /chassis/odom and /amcl_pose over time."
+        )
+        .with_blocking(False)
+        .with_plotly_data(str(fig.to_json()))
+        .with_importance(MetricImportance.HIGH_IMPORTANCE)
+        .with_status(MetricStatus.PASSED_METRIC_STATUS)
+    )
+
+
 def run_experience_metrics(args):
     """Run the metrics for a single experience."""
 
@@ -550,6 +627,9 @@ def run_experience_metrics(args):
     
     # Add robot trajectory metric
     add_robot_trajectory_metric(metrics_writer, args.log_path, transform_manager)
+    
+    # Add pose difference metric
+    add_pose_difference_metric(metrics_writer, args.log_path, transform_manager)
     
     metrics_output = write_proto(metrics_writer, args.output_path)
 
