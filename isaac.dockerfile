@@ -1,3 +1,4 @@
+# ROS build image
 FROM osrf/ros:humble-desktop-full AS build
 
 RUN apt update && \
@@ -14,6 +15,10 @@ RUN source /opt/ros/humble/setup.bash && \
 	rosdep install -i --from-path src --rosdistro humble -y && \
 	colcon build
 
+# Shaders image
+FROM 909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaac-sim-4-5-0-shaders-8-7 AS shaders
+
+# Isaac Sim image
 FROM nvcr.io/nvidia/isaac-sim:4.5.0 AS run
 
 ENV OMNI_KIT_ALLOW_ROOT=1
@@ -29,6 +34,7 @@ RUN apt update && apt install curl -y && \
 		ros-humble-nav2-bringup python3-rosdep python3-rosinstall python3-rosinstall-generator \
 		python3-wstool build-essential ros-humble-rviz2 ros-humble-rosbag2-storage-mcap python3-colcon-common-extensions
 
+COPY --from=shaders /isaac-sim/kit/cache /isaac-sim/kit/cache
 COPY --from=build /humble_ws /humble_ws
 
 RUN rosdep init && \
