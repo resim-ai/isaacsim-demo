@@ -16,7 +16,7 @@ RUN source /opt/ros/humble/setup.bash && \
 	colcon build
 
 # Shaders image
-FROM 909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaac-sim-4-5-0-shaders-8-7 AS shaders
+FROM 909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaac-sim-4-5-0-shaders-8-7@sha256:073481cfda9a476c961bf9f5de4eb563a092545c0a12d3370a0ad9daf7b3b447 AS shaders
 
 # Isaac Sim image
 FROM nvcr.io/nvidia/isaac-sim:4.5.0 AS run
