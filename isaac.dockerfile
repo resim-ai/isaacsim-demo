@@ -20,7 +20,10 @@ RUN apt update && apt install curl -y && \
 COPY --from=shaders /isaac-sim/kit/cache /isaac-sim/kit/cache
 COPY /humble_ws /humble_ws
 
-RUN rosdep init && \
+SHELL ["/bin/bash", "-c"]
+
+RUN source /opt/ros/humble/setup.bash && \
+	rosdep init && \
 	apt update && \
     rosdep update && \
     rosdep install -i --from-path /humble_ws/src --rosdistro humble -y && \
