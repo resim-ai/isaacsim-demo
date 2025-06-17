@@ -1,6 +1,3 @@
-# Shaders image
-FROM 909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaac-sim-4-5-0-shaders-8-7@sha256:073481cfda9a476c961bf9f5de4eb563a092545c0a12d3370a0ad9daf7b3b447 AS shaders
-
 # Isaac Sim image
 FROM nvcr.io/nvidia/isaac-sim:4.5.0 AS run
 
@@ -17,8 +14,9 @@ RUN apt update && apt install curl -y && \
 		ros-humble-nav2-bringup python3-rosdep python3-rosinstall python3-rosinstall-generator \
 		python3-wstool build-essential ros-humble-rviz2 ros-humble-rosbag2-storage-mcap python3-colcon-common-extensions
 
-COPY --from=shaders /isaac-sim/kit/cache /isaac-sim/kit/cache
-COPY /humble_ws /humble_ws
+RUN --mount=type=bind,source=./build/isaac-cache.tar.gz,target=/isaac-cache.tar.gz \
+    tar -xzf /isaac-cache.tar.gz -C /
+COPY ./humble_ws /humble_ws
 
 SHELL ["/bin/bash", "-c"]
 

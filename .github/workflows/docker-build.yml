@@ -58,6 +58,11 @@ jobs:
         run: |
           ./resim-cli projects select $PROJECT_NAME
 
+      - name: Download Isaac Cache
+        run: |
+          mkdir -p build
+          aws s3 cp s3://resim-binaries/isaac-cache/isaac-cache-575-4-5-0.tar.gz build/isaac-cache.tar.gz
+
       - name: Docker metadata
         id: docker_meta
         uses: docker/metadata-action@v5
