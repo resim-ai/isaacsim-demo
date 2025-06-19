@@ -75,7 +75,7 @@ jobs:
         id: get_image_tag
         run: |
           export IMAGE_TAG=$(echo "${{ steps.docker_meta.outputs.tags }}" | tail -n 1)
-          export "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
 
   create-new-nav2-mcb-build:
     name: Create New Nav2 MCB Build
@@ -132,7 +132,7 @@ jobs:
         id: get_image_tag
         run: |
           export IMAGE_TAG=$(echo "${{ steps.docker_meta.outputs.tags }}" | tail -n 1)
-          export "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
 
   create-new-isaac-sim-metrics-build:
     name: Create New Isaac Sim Metrics Build
