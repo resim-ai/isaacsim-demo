@@ -59,7 +59,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ${{ env.REGISTRY_NAME }}/customer-test-images
+            ${{ env.REGISTRY_NAME }}/${{ env.BUILD_REPO_NAME }}
           tags: |
             type=ref,event=branch,prefix=isaacsim-mcb-isaacsim-
             type=ref,event=pr,prefix=isaacsim-mcb-isaacsim-pr-
@@ -116,7 +116,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ${{ env.REGISTRY_NAME }}/customer-test-images
+            ${{ env.REGISTRY_NAME }}/${{ env.BUILD_REPO_NAME }}
           tags: |
             type=ref,event=branch,prefix=isaacsim-mcb-nav2-
             type=ref,event=pr,prefix=isaacsim-mcb-nav2-pr-
