@@ -20,8 +20,9 @@
 	"customizations": {
         "vscode": {
             "extensions": [
-                "ms-python.python"
-            ],
+				"ms-python.python",
+				"charliermarsh.ruff"
+			],
 			"settings": {
 				"python.analysis.extraPaths": [
 					"/opt/ros/humble/lib/python3.10/site-packages",
