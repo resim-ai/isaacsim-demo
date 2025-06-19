@@ -2,11 +2,6 @@
 
 set -euxo pipefail
 
-if [ ! -f "build/isaac-cache.tar.gz" ]; then
-    mkdir -p build
-    aws s3 cp s3://resim-binaries/isaac-cache/isaac-cache-575-4-5-0.tar.gz build/isaac-cache.tar.gz
-fi
-
 docker build . -f builds/isaacsim/isaacsim.dockerfile -t resim-isaacsim
 docker build . -f builds/nav2/nav2.dockerfile -t resim-humble-nav2
 docker build metrics -f metrics/Dockerfile -t isaac-humble-metrics
