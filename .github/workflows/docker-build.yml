@@ -248,6 +248,10 @@ jobs:
           yq -i '.services.isaacsim.image = "${{ needs.create-new-isaac-sim-mcb-build.outputs.image_tag }}"' ./builds/docker-compose.yml
           yq -i '.services.nav2.image = "${{ needs.create-new-nav2-mcb-build.outputs.image_tag }}"' ./builds/docker-compose.yml
 
+      - name: Select Project
+        run: |
+          ./resim-cli projects select $PROJECT_NAME
+
       - name: Register Isaac Sim Build in ReSim
         id: register_build
         run: |
@@ -258,4 +262,4 @@ jobs:
       - name: Run Suite
         run: |
           echo "Running the Isaac Sim test suite..."
-          ./resim-cli suites run --project "$PROJECT_NAME" --test-suite "$SIM_TEST_SUITE" --github --build-id "${{ steps.register_build.outputs.build_id }}" >> $GITHUB_OUTPUT
+          ./resim-cli suites run --test-suite "$SIM_TEST_SUITE" --github --build-id "${{ steps.register_build.outputs.build_id }}" >> $GITHUB_OUTPUT
