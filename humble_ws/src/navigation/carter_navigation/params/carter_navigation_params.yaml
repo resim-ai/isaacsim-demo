@@ -341,11 +341,11 @@ planner_server:
       tolerance: 0.25
       downsample_costmap: false
       allow_unknown: true
-      max_iterations: 10
+      max_iterations: 10000
       max_planning_time: 3.0
       motion_model_for_search: "REEDS_SHEPP"
       angle_quantization_bins: 72
-      minimum_turning_radius: 0.5
+      minimum_turning_radius: 0.05
       reverse_penalty: 2.1
       change_penalty: 0.2
       non_straight_penalty: 1.05
