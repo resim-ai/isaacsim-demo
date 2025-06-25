@@ -341,7 +341,7 @@ planner_server:
       tolerance: 0.25
       downsample_costmap: false
       allow_unknown: true
-      max_iterations: 10000
+      max_iterations: 10
       max_planning_time: 3.0
       motion_model_for_search: "REEDS_SHEPP"
       angle_quantization_bins: 72
