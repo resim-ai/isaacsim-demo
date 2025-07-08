@@ -74,7 +74,7 @@ class SetNavigationGoal(Node):
             # Assumption is that initial pose is set after publishing first time in this duration.
             # Can be changed to more sophisticated way. e.g. /particlecloud topic has no msg until
             # the initial pose is set.
-            time.sleep(10)
+            time.sleep(5)
             self.get_logger().info("Sending first goal")
 
 
