@@ -145,30 +145,30 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
-            # Declaring the Isaac Sim scene path. 'gui' launch argument is already used withing run_isaac_sim.launch.py
-            DeclareLaunchArgument(
-                "gui",
-                default_value="https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.5/Isaac/Samples/ROS2/Scenario/carter_warehouse_navigation.usd",
-                description="Path to isaac sim scene",
-            ),
-            # Include Isaac Sim launch file from isaacsim package with given launch parameters.
-            IncludeLaunchDescription(
-                PythonLaunchDescriptionSource(
-                    [
-                        os.path.join(
-                            get_package_share_directory("isaacsim"),
-                            "launch",
-                            "run_isaacsim.launch.py",
-                        ),
-                    ]
-                ),
-                launch_arguments={
-                    "version": "4.5.0",
-                    "play_sim_on_start": "true",
-                    "install_path": "/isaac-sim",
-                    "headless": "webrtc",
-                }.items(),
-            ),
+            # # Declaring the Isaac Sim scene path. 'gui' launch argument is already used withing run_isaac_sim.launch.py
+            # DeclareLaunchArgument(
+            #     "gui",
+            #     default_value="https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.5/Isaac/Samples/ROS2/Scenario/carter_warehouse_navigation.usd",
+            #     description="Path to isaac sim scene",
+            # ),
+            # # Include Isaac Sim launch file from isaacsim package with given launch parameters.
+            # IncludeLaunchDescription(
+            #     PythonLaunchDescriptionSource(
+            #         [
+            #             os.path.join(
+            #                 get_package_share_directory("isaacsim"),
+            #                 "launch",
+            #                 "run_isaacsim.launch.py",
+            #             ),
+            #         ]
+            #     ),
+            #     launch_arguments={
+            #         "version": "4.5.0",
+            #         "play_sim_on_start": "true",
+            #         "install_path": "/isaac-sim",
+            #         "headless": "webrtc",
+            #     }.items(),
+            # ),
             # DeclareLaunchArgument("map", default_value=map_dir, description="Full path to map file to load"),
             # DeclareLaunchArgument(
             #     "params_file", default_value=param_dir, description="Full path to param file to load"
