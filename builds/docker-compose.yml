@@ -1,9 +1,9 @@
 services:
   isaacsim:
     image: 909785973729.dkr.ecr.us-east-1.amazonaws.com/customer-test-images:isaacsim-mcb-isaacsim
+    privileged: true
     labels:
       - resim.ai/ignoreContainerNotFinished=true
-    privileged: true
     environment:
       - NVIDIA_DRIVER_CAPABILITIES=all
     deploy:

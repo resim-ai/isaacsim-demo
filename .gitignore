@@ -8,3 +8,4 @@ humble_ws/install
 humble_ws/log
 outputs
 build
+.venv

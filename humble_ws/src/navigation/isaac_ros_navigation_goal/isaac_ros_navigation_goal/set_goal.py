@@ -6,6 +6,7 @@ from .obstacle_map import GridMap
 from .goal_generators import RandomGoalGenerator, GoalReader
 import sys
 from geometry_msgs.msg import PoseWithCovarianceStamped, PoseStamped
+from example_interfaces.msg import String
 import time
 
 
@@ -31,12 +32,13 @@ class SetNavigationGoal(Node):
         action_server_name = self.get_parameter("action_server_name").value
         self._action_client = ActionClient(self, NavigateToPose, action_server_name)
 
-        self.MAX_ITERATION_COUNT = self.get_parameter("iteration_count").value
+        self.MAX_ITERATION_COUNT = int(self.get_parameter("iteration_count").value)
         assert self.MAX_ITERATION_COUNT > 0
         self.curr_iteration_count = 1
 
         self.__initial_goal_publisher = self.create_publisher(PoseWithCovarianceStamped, "/initialpose", 5)
         self.__goal_publisher = self.create_publisher(PoseStamped, "/goal", 5)
+        self.__goal_status_publisher = self.create_publisher(String, "/goal/status", 5)
 
         self.__initial_pose = self.get_parameter("initial_pose").value
         self.__is_initial_pose_sent = True if self.__initial_pose is None else False
@@ -75,6 +77,8 @@ class SetNavigationGoal(Node):
             time.sleep(10)
             self.get_logger().info("Sending first goal")
 
+
+        self.__goal_status_publisher.publish(String(data="NEW_GOAL"))
         self._action_client.wait_for_server()
         goal_msg = self.__get_goal()
 
@@ -156,6 +160,7 @@ class SetNavigationGoal(Node):
             self.curr_iteration_count += 1
             self.send_goal()
         else:
+            self.__goal_status_publisher.publish(String(data="COMPLETE"))
             self.get_logger().info("All goals reached.")
             rclpy.shutdown()
 

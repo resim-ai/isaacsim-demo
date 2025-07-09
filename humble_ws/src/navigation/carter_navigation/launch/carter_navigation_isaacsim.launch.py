@@ -8,16 +8,18 @@
 import json
 import os
 from pathlib import Path
+from typing import Optional
 
 from ament_index_python.packages import get_package_share_directory
-from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, TimerAction
+from launch import LaunchDescription, LaunchDescriptionEntity
+from launch.actions import TimerAction
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch.actions import RegisterEventHandler, ExecuteProcess, Shutdown
 from launch.event_handlers import OnProcessIO
+from launch.events.process import ProcessIO
 
 def get_experience_location() -> str:
     test_config_path = Path("/tmp/resim/test_config.json")
@@ -70,6 +72,7 @@ def generate_launch_description():
         "/cmd_vel_nav",
         "/initialpose",
         "/goal",
+        "/goal/status",
         "/amcl_pose",
         "/behavior_tree_log",
         
@@ -78,6 +81,7 @@ def generate_launch_description():
         "/local_plan", 
         "/received_global_plan",
         "/transformed_global_plan",
+        "/trajectories",
         
         # Costmaps
         "/global_costmap/costmap",
@@ -110,7 +114,11 @@ def generate_launch_description():
             "--output",
             "/tmp/resim/outputs/record",
             "--use-sim-time",
-        ] + topics,
+            "--all",
+            "--exclude",
+            "(/front_stereo_camera/left/image_raw$|/front_stereo_camera/left/image_raw/nitros_bridge$)"
+        ],
+        # ] + topics,
         output="screen",
     )
 
@@ -134,7 +142,7 @@ def generate_launch_description():
         [record_node, TimerAction(period=5.0, actions=[ld_automatic_goal])]
     )
 
-    def execute_second_node_if_condition_met(event, second_node_action, message):
+    def execute_second_node_if_condition_met(event: ProcessIO, second_node_action: LaunchDescriptionEntity, message: str) -> Optional[LaunchDescriptionEntity]:
         output = event.text.decode().strip()
         # Look for fully loaded message from Isaac Sim. Only applicable in Gui mode.
         if message in output:
