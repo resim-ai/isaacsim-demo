@@ -5,7 +5,7 @@ from nav2_msgs.action import NavigateToPose
 from .obstacle_map import GridMap
 from .goal_generators import RandomGoalGenerator, GoalReader
 import sys
-from geometry_msgs.msg import PoseWithCovarianceStamped
+from geometry_msgs.msg import PoseWithCovarianceStamped, PoseStamped
 import time
 
 
@@ -35,7 +35,8 @@ class SetNavigationGoal(Node):
         assert self.MAX_ITERATION_COUNT > 0
         self.curr_iteration_count = 1
 
-        self.__initial_goal_publisher = self.create_publisher(PoseWithCovarianceStamped, "/initialpose", 1)
+        self.__initial_goal_publisher = self.create_publisher(PoseWithCovarianceStamped, "/initialpose", 5)
+        self.__goal_publisher = self.create_publisher(PoseStamped, "/goal", 5)
 
         self.__initial_pose = self.get_parameter("initial_pose").value
         self.__is_initial_pose_sent = True if self.__initial_pose is None else False
@@ -81,6 +82,8 @@ class SetNavigationGoal(Node):
             rclpy.shutdown()
             sys.exit(1)
 
+        self.__goal_publisher.publish(goal_msg.pose)
+
         self._send_goal_future = self._action_client.send_goal_async(
             goal_msg, feedback_callback=self.__feedback_callback
         )
@@ -96,7 +99,7 @@ class SetNavigationGoal(Node):
         if not goal_handle.accepted:
             self.get_logger().info("Goal rejected :(")
             rclpy.shutdown()
-            return
+            sys.exit(1)
 
         self.get_logger().info("Goal accepted :)")
 
@@ -153,6 +156,7 @@ class SetNavigationGoal(Node):
             self.curr_iteration_count += 1
             self.send_goal()
         else:
+            self.get_logger().info("All goals reached.")
             rclpy.shutdown()
 
     def __feedback_callback(self, feedback_msg):

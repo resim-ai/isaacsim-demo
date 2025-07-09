@@ -1,0 +1,12 @@
+# jupyter
+ipykernel
+nbformat>=4.2.0
+# metrics
+numpy<2.0
+pandas
+resim-open-core>=0.6.0
+# cool stuff
+mcap
+shapely
+pyyaml
+imageio

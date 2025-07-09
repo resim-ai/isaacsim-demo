@@ -22,6 +22,8 @@ def main():
     except Exception as e:
         carb.log_error(str(e))
         return
+    
+    print("opening stage")
 
     omni.kit.async_engine.run_coroutine(open_stage_async(options.path, options.start_on_play))
 
