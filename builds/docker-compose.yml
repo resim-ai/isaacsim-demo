@@ -15,7 +15,21 @@ services:
               capabilities:
                 - gpu
                 - nvidia
+    healthcheck:
+      interval: 5s
+      retries: 50
+      start_period: 30s
+      test:
+          - CMD
+          - sh
+          - -c
+          - if [ -f /tmp/isaac_ready ]; then echo 'Isaac Sim is ready'; exit 0; else echo 'Isaac Sim not ready yet'; exit 1; fi
+      timeout: 10s
   nav2:
     image: ${NAV2_IMAGE}
     labels:
       - resim.ai/isTestOrchestrator=true
+    depends_on:
+      isaacsim:
+        condition: service_healthy
+        required: true

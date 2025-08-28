@@ -110,6 +110,7 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
+            TimerAction(period=3 * 60.0, actions=[Shutdown(reason="Job timed out.")], cancel_on_shutdown=True),
             # # Declaring the Isaac Sim scene path. 'gui' launch argument is already used withing run_isaac_sim.launch.py
             # DeclareLaunchArgument(
             #     "gui",

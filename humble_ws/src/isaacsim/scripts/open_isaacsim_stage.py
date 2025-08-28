@@ -7,6 +7,9 @@ import asyncio
 import omni.client
 import omni.kit.async_engine
 import omni.timeline
+import time
+
+from pathlib import Path
 
 def main():
     parser = argparse.ArgumentParser()
@@ -55,6 +58,9 @@ async def open_stage_async(path: str, start_on_play: bool):
                 await omni.kit.app.get_app().next_update_async()
                 await omni.kit.app.get_app().next_update_async()
                 timeline_interface.play()
+                Path("/tmp/isaac_ready").touch()
+                while not timeline_interface.is_playing():
+                    time.sleep(0.1)
                 print("Stage loaded and simulation is playing.")
             pass
     result, _ = await omni.client.stat_async(path)
