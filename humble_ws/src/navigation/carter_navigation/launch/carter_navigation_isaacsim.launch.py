@@ -118,7 +118,6 @@ def generate_launch_description():
             "--exclude",
             "(/front_stereo_camera/left/image_raw$|/front_stereo_camera/left/image_raw/nitros_bridge$)"
         ],
-        # ] + topics,
         output="screen",
     )
 
