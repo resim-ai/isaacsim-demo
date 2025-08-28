@@ -230,7 +230,7 @@ jobs:
         run: |
           # Get the last tag (SHA tag) from the list of tags
           export SHA_TAG=$(echo "${{ steps.docker_meta.outputs.tags }}" | tail -n 1)
-          METRICS_BUILD_ID=$(./resim-cli metrics-builds create --name "Isaac Sim Metrics Build" --version "$COMMIT_SHA" --image "$SHA_TAG" --systems $SIM_SYSTEM_ID --github | sed 's/.*=//')
+          export METRICS_BUILD_ID=$(./resim-cli metrics-builds create --name "Isaac Sim Metrics Build" --version "$COMMIT_SHA" --image "$SHA_TAG" --systems $SIM_SYSTEM_ID --github | sed 's/.*=//')
           echo "METRICS_BUILD_ID=$METRICS_BUILD_ID" >> $GITHUB_ENV
       
       - name: Update Test Suite
@@ -272,8 +272,8 @@ jobs:
       - name: Register Isaac Sim Build in ReSim
         id: register_build
         run: |
-          ISAACSIM_IMAGE=${{ needs.create-new-isaac-sim-mcb-build.outputs.image_tag }}
-          NAV2_IMAGE=${{ needs.create-new-nav2-mcb-build.outputs.image_tag }}
+          export ISAACSIM_IMAGE=${{ needs.create-new-isaac-sim-mcb-build.outputs.image_tag }}
+          export NAV2_IMAGE=${{ needs.create-new-nav2-mcb-build.outputs.image_tag }}
           ./resim-cli builds create --build-spec ./builds/docker-compose.yml --use-os-env \
             --system $SIM_SYSTEM_ID --name "Isaac Sim Build" --description "A build of the Isaac Sim system" \
             --version "${{ env.COMMIT_SHA }}" --branch "${{ env.BRANCH_NAME }}" --auto-create-branch --github >> $GITHUB_OUTPUT
