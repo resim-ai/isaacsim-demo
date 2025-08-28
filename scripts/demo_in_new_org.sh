@@ -56,8 +56,8 @@ resim test-suites create --project "${PROJECT_NAME}" \
 
 # Set up the three system builds
 # V1 - slow and a bit sad
-yq -iy '.services.isaacsim.image = "909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-isaacsim-bdbf838"' ./builds/docker-compose.yml
-yq -iy '.services.nav2.image = "909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-nav2-bdbf838"' ./builds/docker-compose.yml
+ISAACSIM_IMAGE="909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-isaacsim-bdbf838"
+NAV2_IMAGE="909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-nav2-bdbf838"
 export ISAAC_SIM_BUILD_ID_V1="$(resim builds create --project "${PROJECT_NAME}" --build-spec ./builds/docker-compose.yml \
   --system "Isaac Sim" --name "Isaac Sim Build @ bdbf838" --description "bdbf838: [nav2] Add new metrics" \
   --branch "main" --version "bdbf838" --auto-create-branch --github | sed 's/.*=//')"
@@ -65,8 +65,8 @@ sleep 60
 # pause
 
 # V2 - new controller - faster
-yq -iy '.services.isaacsim.image = "909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-isaacsim-33edb5e"' ./builds/docker-compose.yml
-yq -iy '.services.nav2.image = "909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-nav2-33edb5e"' ./builds/docker-compose.yml
+ISAACSIM_IMAGE="909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-isaacsim-33edb5e"
+NAV2_IMAGE="909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-nav2-33edb5e"
 export ISAAC_SIM_BUILD_ID_V2="$(resim builds create --project "${PROJECT_NAME}" --build-spec ./builds/docker-compose.yml \
   --system "Isaac Sim" --name "Isaac Sim Build @ 33edb5e" --description "33edb5e: [nav2] Use MPPI controller" \
   --branch "main" --version "33edb5e" --auto-create-branch --github | sed 's/.*=//')"
@@ -74,8 +74,8 @@ sleep 60
 # pause
 
 # V3 - new planner - smoother
-yq -iy '.services.isaacsim.image = "909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-isaacsim-19995ae"' ./builds/docker-compose.yml
-yq -iy '.services.nav2.image = "909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-nav2-19995ae"' ./builds/docker-compose.yml
+ISAACSIM_IMAGE="909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-isaacsim-19995ae"
+NAV2_IMAGE="909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-nav2-19995ae"
 export ISAAC_SIM_BUILD_ID_V3="$(resim builds create --project "${PROJECT_NAME}" --build-spec ./builds/docker-compose.yml \
   --system "Isaac Sim" --name "Isaac Sim Build @ 19995ae" --description "19995ae: [nav2] Use SmacLattice planner" \
   --branch "main" --version "19995ae" --auto-create-branch --github | sed 's/.*=//')"
