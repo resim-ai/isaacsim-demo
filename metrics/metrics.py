@@ -621,7 +621,7 @@ def add_time_to_goal_metric(writer: ResimMetricsWriter, input_bag: Path):
         .with_description("Time between receiving first goal and reaching final goal.")
         .with_status(MetricStatus.NOT_APPLICABLE_METRIC_STATUS)
         .with_importance(MetricImportance.MEDIUM_IMPORTANCE)
-        .with_value(end_timestamp_int)
+        .with_value(end_timestamp)
         .with_unit("seconds")
     )
         

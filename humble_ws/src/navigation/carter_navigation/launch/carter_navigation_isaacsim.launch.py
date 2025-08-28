@@ -62,48 +62,6 @@ def generate_launch_description():
     #     "carter_navigation.rviz",
     # )
 
-    topics = [
-        # Core system topics
-        "/clock",
-        "/tf",
-        
-        # Navigation commands and status
-        "/cmd_vel",
-        "/cmd_vel_nav",
-        "/initialpose",
-        "/goal",
-        "/goal/status",
-        "/amcl_pose",
-        "/behavior_tree_log",
-        
-        # Plans and trajectories
-        "/plan",
-        "/local_plan", 
-        "/received_global_plan",
-        "/transformed_global_plan",
-        "/trajectories",
-        
-        # Costmaps
-        "/global_costmap/costmap",
-        "/global_costmap/costmap_raw",
-        "/global_costmap/published_footprint",
-        "/global_costmap/global_costmap/transition_event",
-        "/local_costmap/costmap",
-        "/local_costmap/costmap_raw",
-        "/local_costmap/costmap_updates",
-        "/local_costmap/published_footprint",
-        "/local_costmap/clearing_endpoints",
-        "/local_costmap/local_costmap/transition_event",
-        
-        # Sensor data
-        "/chassis/odom",
-        "/chassis/imu",
-        "/front_stereo_imu/imu",
-        "/left_stereo_imu/imu",
-        "/front_stereo_camera/left/camera_info",
-        "/front_stereo_camera/left/image_raw_throttled",
-    ]
-
     record_node = ExecuteProcess(
         cmd=[
             "ros2",
