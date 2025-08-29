@@ -1,8 +1,4 @@
-FROM nvcr.io/nvidia/isaac-sim:5.0.0
-
-ENV OMNI_KIT_ALLOW_ROOT=1
-ENV ACCEPT_EULA=Y
-ENV NVIDIA_DRIVER_CAPABILITIES=all
+FROM 909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-isaacsim-5-0-0-shader-cache
 
 # Setup entrypoint and deps
 COPY builds/isaacsim/entrypoint.sh /

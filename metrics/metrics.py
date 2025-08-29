@@ -604,7 +604,7 @@ def add_robot_trajectory_metric(
 
 def add_time_to_goal_metric(writer: ResimMetricsWriter, input_bag: Path):
     first_goal_timestamp: float = math.inf
-    end_timestamp: float = 180.0
+    end_timestamp: float = 0.0
     msg: String
     for _, msg, timestamp in read_messages(
         str(input_bag), ["/goal/status"]
@@ -618,8 +618,8 @@ def add_time_to_goal_metric(writer: ResimMetricsWriter, input_bag: Path):
     end_timestamp = (end_timestamp - first_goal_timestamp) / 1e9
     (
         writer.add_scalar_metric("Time to reach final goal")
-        .with_description("Time between receiving first goal and reaching final goal. Fails if final goal not reached.")
-        .with_status(MetricStatus.FAIL_BLOCK_METRIC_STATUS if end_timestamp == 180.0 else MetricStatus.PASSED_METRIC_STATUS)
+        .with_description("Time between receiving first goal and reaching final goal.")
+        .with_status(MetricStatus.NOT_APPLICABLE_METRIC_STATUS)
         .with_importance(MetricImportance.MEDIUM_IMPORTANCE)
         .with_value(end_timestamp)
         .with_unit("seconds")

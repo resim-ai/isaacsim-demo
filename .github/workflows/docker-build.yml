@@ -80,8 +80,8 @@ jobs:
           file: ./builds/isaacsim/isaacsim.dockerfile
           push: true
           tags: ${{ steps.docker_meta.outputs.tags }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-isaacsim-5-0-0-docker-cache
+          cache-to: type=registry,ref=909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-isaacsim-5-0-0-docker-cache,mode=max
       
       - uses: imjasonh/setup-crane@v0.4
 
