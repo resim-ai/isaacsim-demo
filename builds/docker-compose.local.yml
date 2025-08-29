@@ -1,0 +1,14 @@
+# Used for running locally. Build the images first with `scripts/rebuild.sh`.
+services:
+  isaacsim:
+    extends:
+      file: docker-compose.yml
+      service: isaacsim
+    image: resim-isaacsim
+  nav2:
+    extends:
+      file: docker-compose.yml
+      service: nav2
+    image: resim-humble-nav2
+    volumes:
+      - ./outputs:/tmp/resim/outputs

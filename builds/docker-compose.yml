@@ -1,9 +1,9 @@
 services:
   isaacsim:
-    image: 909785973729.dkr.ecr.us-east-1.amazonaws.com/customer-test-images:isaacsim-mcb-isaacsim
+    image: ${ISAACSIM_IMAGE}
+    privileged: true
     labels:
       - resim.ai/ignoreContainerNotFinished=true
-    privileged: true
     environment:
       - NVIDIA_DRIVER_CAPABILITIES=all
     deploy:
@@ -16,6 +16,6 @@ services:
                 - gpu
                 - nvidia
   nav2:
-    image: 909785973729.dkr.ecr.us-east-1.amazonaws.com/customer-test-images:isaacsim-mcb-nav2
+    image: ${NAV2_IMAGE}
     labels:
       - resim.ai/isTestOrchestrator=true

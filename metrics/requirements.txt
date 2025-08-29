@@ -10,3 +10,4 @@ mcap
 shapely
 pyyaml
 imageio
+opencv-python

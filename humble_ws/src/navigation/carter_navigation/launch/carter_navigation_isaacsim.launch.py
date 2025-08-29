@@ -8,16 +8,18 @@
 import json
 import os
 from pathlib import Path
+from typing import Optional
 
 from ament_index_python.packages import get_package_share_directory
-from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, TimerAction
+from launch import LaunchDescription, LaunchDescriptionEntity
+from launch.actions import TimerAction
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch.actions import RegisterEventHandler, ExecuteProcess, Shutdown
 from launch.event_handlers import OnProcessIO
+from launch.events.process import ProcessIO
 
 def get_experience_location() -> str:
     test_config_path = Path("/tmp/resim/test_config.json")
@@ -60,46 +62,6 @@ def generate_launch_description():
     #     "carter_navigation.rviz",
     # )
 
-    topics = [
-        # Core system topics
-        "/clock",
-        "/tf",
-        
-        # Navigation commands and status
-        "/cmd_vel",
-        "/cmd_vel_nav",
-        "/initialpose",
-        "/goal",
-        "/amcl_pose",
-        "/behavior_tree_log",
-        
-        # Plans and trajectories
-        "/plan",
-        "/local_plan", 
-        "/received_global_plan",
-        "/transformed_global_plan",
-        
-        # Costmaps
-        "/global_costmap/costmap",
-        "/global_costmap/costmap_raw",
-        "/global_costmap/published_footprint",
-        "/global_costmap/global_costmap/transition_event",
-        "/local_costmap/costmap",
-        "/local_costmap/costmap_raw",
-        "/local_costmap/costmap_updates",
-        "/local_costmap/published_footprint",
-        "/local_costmap/clearing_endpoints",
-        "/local_costmap/local_costmap/transition_event",
-        
-        # Sensor data
-        "/chassis/odom",
-        "/chassis/imu",
-        "/front_stereo_imu/imu",
-        "/left_stereo_imu/imu",
-        "/front_stereo_camera/left/camera_info",
-        "/front_stereo_camera/left/image_raw_throttled",
-    ]
-
     record_node = ExecuteProcess(
         cmd=[
             "ros2",
@@ -110,7 +72,10 @@ def generate_launch_description():
             "--output",
             "/tmp/resim/outputs/record",
             "--use-sim-time",
-        ] + topics,
+            "--all",
+            "--exclude",
+            "(/front_stereo_camera/left/image_raw$|/front_stereo_camera/left/image_raw/nitros_bridge$)"
+        ],
         output="screen",
     )
 
@@ -134,7 +99,7 @@ def generate_launch_description():
         [record_node, TimerAction(period=5.0, actions=[ld_automatic_goal])]
     )
 
-    def execute_second_node_if_condition_met(event, second_node_action, message):
+    def execute_second_node_if_condition_met(event: ProcessIO, second_node_action: LaunchDescriptionEntity, message: str) -> Optional[LaunchDescriptionEntity]:
         output = event.text.decode().strip()
         # Look for fully loaded message from Isaac Sim. Only applicable in Gui mode.
         if message in output:

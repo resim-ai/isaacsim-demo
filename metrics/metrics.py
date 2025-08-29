@@ -2,6 +2,7 @@ import argparse
 from enum import Enum
 import json
 import logging
+import math
 import sys
 from typing import Any, Sequence, cast
 import uuid
@@ -9,7 +10,6 @@ from pathlib import Path
 import cv2
 import numpy as np
 import imageio
-
 import rclpy.serialization
 from rosidl_runtime_py.utilities import get_message
 import rosbag2_py
@@ -20,11 +20,13 @@ from tf2_msgs.msg import TFMessage
 from tf2_ros import Buffer
 import tf2_geometry_msgs
 from rclpy.time import Time, Duration
+from example_interfaces.msg import String
 
 import resim.metrics.fetch_job_metrics as fjm
 from resim.metrics.fetch_all_pages import fetch_all_pages
 from resim_python_client import AuthenticatedClient
 from resim_python_client.api.batches import list_jobs
+
 
 from resim.metrics.resim_style import resim_plotly_style, resim_colors as RESIM_COLORS, RESIM_TURQUOISE
 from resim.metrics.proto.validate_metrics_proto import validate_job_metrics
@@ -34,8 +36,11 @@ from resim.metrics.python.metrics_utils import (
     MetricStatus,
     Timestamp,
 )
-from resim.metrics.python.metrics import ExternalFileMetricsData, SeriesMetricsData
+from resim.metrics.python.metrics import ExternalFileMetricsData, SeriesMetricsData, ScalarMetric
 from resim.metrics.python.metrics_writer import ResimMetricsWriter
+from resim.transforms.python.quaternion import Quaternion
+from resim.transforms.python.so3_python import SO3
+from resim.metrics.python.unpack_metrics import UnpackedMetrics
 import plotly.express as px
 import pandas as pd
 import plotly.graph_objects as go
@@ -451,6 +456,16 @@ def add_camera_gif_metric(
     )
 
 
+def radians_down_to_up_to_degrees(radians):
+    """
+    Convert radians to degrees. The bounds of the input are 0-2pi, and output is -180-180.
+    The reference of the input is 0 degrees = South, the output is 0 degrees = North
+    """
+    corrected = (math.pi - radians) % (2 * math.pi)
+    degrees = math.degrees(corrected)
+    wrapped = ((degrees + 180) % 360) - 180
+    return wrapped
+
 def add_robot_trajectory_metric(
     writer: ResimMetricsWriter, input_bag: Path, transform_manager: TransformManager
 ):
@@ -467,6 +482,7 @@ def add_robot_trajectory_metric(
     timestamps: list[int] = []
     goal_x = []
     goal_y = []
+    goal_angle = []
     message_count = 0
 
     logger.info("Calculating robot trajectory...")
@@ -501,6 +517,9 @@ def add_robot_trajectory_metric(
             assert isinstance(msg, PoseStamped)
             goal_x.append(msg.pose.position.x)
             goal_y.append(msg.pose.position.y)
+            so3 = SO3(quaternion=Quaternion(w=msg.pose.orientation.w, x=msg.pose.orientation.x, y=msg.pose.orientation.y, z=msg.pose.orientation.z))
+            # NOTE: This won't handle non-zero x and y components of the goal orientation.
+            goal_angle.append(radians_down_to_up_to_degrees(so3.log()[2]))
 
     if not x_positions:
         logger.warning("No odometry data found")
@@ -548,9 +567,10 @@ def add_robot_trajectory_metric(
                 name="Goals",
                 marker=dict(
                     size=12,
-                    symbol="star",
+                    symbol="arrow",
                     color="yellow",
                     line=dict(color="black", width=1),
+                    angle=goal_angle
                 ),
             )
         )
@@ -574,13 +594,37 @@ def add_robot_trajectory_metric(
     (
         writer.add_plotly_metric("Robot Trajectory")
         .with_description(
-            "Top-down view of the robot's trajectory throughout the run, with goal points marked as yellow stars."
+            "Top-down view of the robot's trajectory throughout the run, with goal points marked as yellow arrows."
         )
         .with_blocking(False)
         .with_plotly_data(str(fig.to_json()))
         .with_importance(MetricImportance.HIGH_IMPORTANCE)
         .with_status(MetricStatus.PASSED_METRIC_STATUS)
     )
+
+def add_time_to_goal_metric(writer: ResimMetricsWriter, input_bag: Path):
+    first_goal_timestamp: float = math.inf
+    end_timestamp: float = 0.0
+    msg: String
+    for _, msg, timestamp in read_messages(
+        str(input_bag), ["/goal/status"]
+    ):
+        if msg.data == "NEW_GOAL":
+            first_goal_timestamp = min(first_goal_timestamp, timestamp)
+        elif msg.data == "COMPLETE":
+            assert end_timestamp == 0.0, "/goal/status COMPLETE message seen more than once."
+            end_timestamp = timestamp
+    
+    end_timestamp = (end_timestamp - first_goal_timestamp) / 1e9
+    (
+        writer.add_scalar_metric("Time to reach final goal")
+        .with_description("Time between receiving first goal and reaching final goal.")
+        .with_status(MetricStatus.NOT_APPLICABLE_METRIC_STATUS)
+        .with_importance(MetricImportance.MEDIUM_IMPORTANCE)
+        .with_value(end_timestamp)
+        .with_unit("seconds")
+    )
+        
 
 
 def add_metrics_data(
@@ -725,6 +769,7 @@ def run_experience_metrics(args):
 
     # Add pose difference metric
     add_pose_difference_metric(metrics_writer, args.log_path, transform_manager)
+    add_time_to_goal_metric(metrics_writer, args.log_path)
 
     write_proto(metrics_writer, args.output_path)
 
@@ -784,6 +829,20 @@ def extract_metric_series(job_to_metrics: dict, metric_name: str) -> dict:
         )
         is not None
     }
+
+def extract_scalar_metric_values(job_to_metrics: dict[uuid.UUID, UnpackedMetrics], metric_name: str) -> dict[str, float]:
+    """Extract a scalar metric from job_to_metrics for all jobs."""
+    values = {
+        str(pair[0]): cast(ScalarMetric, data).value
+        for pair in job_to_metrics.items()
+        if (data := next(
+            (data for data in pair[1].metrics if data.name == metric_name),
+            None,
+        ))
+        is not None
+    }
+    values = {k: v for k,v in values.items() if v is not None}
+    return values
 
 
 def run_batch_metrics(args: argparse.Namespace) -> None:
@@ -906,10 +965,10 @@ def run_batch_metrics(args: argparse.Namespace) -> None:
                 ]
                 goal_times = times[goal_transitions[i] : goal_transitions[i + 1]]
 
-                # Calculate time spent within 0.25m
-                close_mask = goal_distances < 0.25
+                # Calculate time spent within 0.5m
+                close_mask = goal_distances < 0.5
                 if np.any(close_mask):
-                    # Find continuous segments where robot is within 0.25m
+                    # Find continuous segments where robot is within 0.5m
                     close_segments = np.where(
                         np.diff(np.concatenate([[False], close_mask, [False]]))
                     )[0].reshape(-1, 2)
@@ -936,7 +995,7 @@ def run_batch_metrics(args: argparse.Namespace) -> None:
         add_strip_or_box_plot(
             writer,
             "Goal Dwelling Time",
-            "Time spent within 0.25m of each goal for each job",
+            "Time spent within 0.5m of each goal for each job",
             dwelling_df,
             value_col="dwelling_time",
             value_label="seconds",
@@ -946,6 +1005,18 @@ def run_batch_metrics(args: argparse.Namespace) -> None:
         )
     else:
         logger.warning("No dwelling times found to plot")
+
+    # Calculate sum of all times to goal
+    goal_sum = np.sum(list(extract_scalar_metric_values(job_to_metrics, "Time to reach final goal").values()))
+    (
+        writer.add_scalar_metric("Total time to reach final goal")
+        .with_description("Sum of all 'Time to reach final goal' metrics across all experiences.")
+        .with_status(MetricStatus.NOT_APPLICABLE_METRIC_STATUS)
+        .with_importance(MetricImportance.MEDIUM_IMPORTANCE)
+        .with_tag("RESIM_SUMMARY", "1")
+        .with_value(goal_sum)
+        .with_unit("seconds")
+    )
 
     write_proto(writer, args.output_path)
 
