@@ -19,7 +19,7 @@ class Checklist(Node):
 
         # Create a timer to log every 5 seconds
         self.timer = self.create_timer(5.0, self.timer_callback)
-    
+
     def timer_callback(self):
         self.get_logger().info("Waiting on IsaacSim to be ready...")
 
