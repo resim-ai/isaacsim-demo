@@ -3,5 +3,6 @@
 export ROS_DISTRO=humble
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/isaac-sim/exts/isaacsim.ros2.bridge/$ROS_DISTRO/lib"
 export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+PUBLIC_IP=$(curl -s ifconfig.me)
 
-/isaac-sim/isaac-sim.streaming.sh --exec '/scripts/open_isaacsim_stage.py --path https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.5/Isaac/Samples/ROS2/Scenario/carter_warehouse_navigation.usd --start-on-play' --/isaac/startup/ros_bridge_extension=isaacsim.ros2.bridge
+/isaac-sim/isaac-sim.streaming.sh --exec '/scripts/open_isaacsim_stage.py --path https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/5.0/Isaac/Samples/ROS2/Scenario/carter_warehouse_navigation.usd --start-on-play' --/isaac/startup/ros_bridge_extension=isaacsim.ros2.bridge --/app/livestream/publicEndpointAddress=$PUBLIC_IP --/app/livestream/port=49100 --/persistent/isaac/asset_root/default="$OMNI_SERVER"  --merge-config="/isaac-sim/config/open_endpoint.toml" --allow-root

@@ -1,3 +1,18 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Script to open a USD stage in Isaac Sim (in standard gui mode). This script along with its arguments are automatically passed to Isaac Sim via the ROS2 launch workflow"""
 
 import carb
@@ -7,9 +22,6 @@ import asyncio
 import omni.client
 import omni.kit.async_engine
 import omni.timeline
-import time
-
-from pathlib import Path
 
 def main():
     parser = argparse.ArgumentParser()
@@ -25,8 +37,6 @@ def main():
     except Exception as e:
         carb.log_error(str(e))
         return
-    
-    print("opening stage")
 
     omni.kit.async_engine.run_coroutine(open_stage_async(options.path, options.start_on_play))
 
@@ -58,9 +68,6 @@ async def open_stage_async(path: str, start_on_play: bool):
                 await omni.kit.app.get_app().next_update_async()
                 await omni.kit.app.get_app().next_update_async()
                 timeline_interface.play()
-                Path("/tmp/isaac_ready").touch()
-                while not timeline_interface.is_playing():
-                    time.sleep(0.1)
                 print("Stage loaded and simulation is playing.")
             pass
     result, _ = await omni.client.stat_async(path)
