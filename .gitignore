@@ -9,3 +9,7 @@ humble_ws/log
 outputs
 build
 .venv
+
+# Emacs
+*~
+.#*

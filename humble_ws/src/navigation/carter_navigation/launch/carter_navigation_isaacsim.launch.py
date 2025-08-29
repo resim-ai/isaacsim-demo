@@ -18,7 +18,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch.actions import RegisterEventHandler, ExecuteProcess, Shutdown
-from launch.event_handlers import OnProcessIO
+from launch.event_handlers import OnProcessIO, OnProcessExit
 from launch.events.process import ProcessIO
 
 def get_experience_location() -> str:
@@ -108,8 +108,7 @@ def generate_launch_description():
 
             return second_node_action
 
-    return LaunchDescription(
-        [
+    nav2_stack = [
             TimerAction(period=3 * 60.0, actions=[Shutdown(reason="Job timed out.")], cancel_on_shutdown=True),
             # # Declaring the Isaac Sim scene path. 'gui' launch argument is already used withing run_isaac_sim.launch.py
             # DeclareLaunchArgument(
@@ -210,4 +209,16 @@ def generate_launch_description():
                 )
             )
         ]
+    checklist_node = Node(
+        package='checklist',
+        executable='checklist',
+        name='checklist_node',
     )
+    nav2_stack_handler = RegisterEventHandler(
+        OnProcessExit(
+            target_action=checklist_node,
+            on_exit=nav2_stack,
+        )
+    )
+    return LaunchDescription([checklist_node, nav2_stack_handler])
+
