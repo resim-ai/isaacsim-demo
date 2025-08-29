@@ -7,6 +7,11 @@ services:
     image: resim-isaacsim
     volumes:
       - shadercache:/shadercache
+    ports:
+      - "8443:8443/tcp"
+      - "49100:49100/tcp"
+      - "47998:47998/udp"
+
   nav2:
     extends:
       file: docker-compose.yml
