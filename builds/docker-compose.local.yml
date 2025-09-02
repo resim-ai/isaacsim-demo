@@ -5,6 +5,8 @@ services:
       file: docker-compose.yml
       service: isaacsim
     image: resim-isaacsim
+    volumes:
+      - shadercache:/shadercache
   nav2:
     extends:
       file: docker-compose.yml
@@ -12,3 +14,6 @@ services:
     image: resim-humble-nav2
     volumes:
       - ./outputs:/tmp/resim/outputs
+
+volumes:
+  shadercache:
