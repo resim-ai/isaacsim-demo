@@ -115,8 +115,22 @@ def generate_launch_description():
             print("Condition met, launching the node.")
 
             return second_node_action
-
+    shutdown_action = TimerAction(
+        period=5 * 60.0,
+        actions=[
+            ExecuteProcess(
+                cmd=[
+                    'ros2', 'service', 'call', '/lifecycle_manager/manage_nodes',
+                    'nav2_msgs/srv/ManageLifecycleNodes', '"{command: 2}"'  # 2 corresponds to SHUTDOWN
+                ],
+                output='screen'
+            ),
+        ],
+        # The cancel_on_shutdown is still useful to stop the timer if the user manually stops the launch file
+        cancel_on_shutdown=True
+    )
     nav2_stack = [
+            shutdown_action,
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
                     [nav2_bringup_launch_dir, "/bringup_launch.py"]
