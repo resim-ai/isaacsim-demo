@@ -117,12 +117,6 @@ def generate_launch_description():
             return second_node_action
 
     nav2_stack = [
-            TimerAction(period=5 * 60.0, actions=[
-                        ExecuteProcess(
-                            cmd=["ros2", "node", "list", "|", "xargs", "-r", "ros2", "node", "kill"],
-                            shell=True
-                        ),
-            ], cancel_on_shutdown=True),
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
                     [nav2_bringup_launch_dir, "/bringup_launch.py"]
