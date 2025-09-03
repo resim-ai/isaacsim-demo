@@ -125,8 +125,8 @@ velocity_smoother:
     min_velocity: [-2.0, 0.0, -1.08]
     # deadband_velocity: [0.0, 0.0, 0.0] 
     velocity_timeout: 1.0 
-    # max_accel: [1.0, 0.0, 1.25] 
-    # max_decel: [-1.0, 0.0, -1.25] 
+    max_accel: [1.0, 0.0, 1.25]
+    max_decel: [-1.0, 0.0, -1.25]
     odom_topic: "chassis/odom" 
     odom_duration: 0.1
 
