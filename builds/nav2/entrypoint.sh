@@ -21,7 +21,7 @@ while [ ! -f /tmp/isaac_ready ]; do
     sleep 1
 done
 
-TIMEOUT=300
+TIMEOUT="${RESIM_NAV2_TIMEOUT:-300}"
 SECONDS=0
 while [ $SECONDS -lt $TIMEOUT ]; do
     if ! kill -0 $LAUNCH_PID 2>/dev/null; then
