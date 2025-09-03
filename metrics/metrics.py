@@ -518,6 +518,7 @@ def add_robot_trajectory_metric(
             goal_x.append(msg.pose.position.x)
             goal_y.append(msg.pose.position.y)
             so3 = SO3(quaternion=Quaternion(w=msg.pose.orientation.w, x=msg.pose.orientation.x, y=msg.pose.orientation.y, z=msg.pose.orientation.z))
+            # NOTE: This won't handle non-zero x and y components of the goal orientation.
             goal_angle.append(radians_down_to_up_to_degrees(so3.log()[2]))
 
     if not x_positions:
@@ -614,13 +615,13 @@ def add_time_to_goal_metric(writer: ResimMetricsWriter, input_bag: Path):
             assert end_timestamp == 0.0, "/goal/status COMPLETE message seen more than once."
             end_timestamp = timestamp
     
-    end_timestamp_int = (end_timestamp - first_goal_timestamp) / 1e9
+    end_timestamp = (end_timestamp - first_goal_timestamp) / 1e9
     (
         writer.add_scalar_metric("Time to reach final goal")
         .with_description("Time between receiving first goal and reaching final goal.")
         .with_status(MetricStatus.NOT_APPLICABLE_METRIC_STATUS)
         .with_importance(MetricImportance.MEDIUM_IMPORTANCE)
-        .with_value(end_timestamp_int)
+        .with_value(end_timestamp)
         .with_unit("seconds")
     )
         

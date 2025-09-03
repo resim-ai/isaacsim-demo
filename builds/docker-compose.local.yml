@@ -1,4 +1,24 @@
+# Used for running locally. Build the images first with `scripts/rebuild.sh`.
 services:
+  isaacsim:
+    extends:
+      file: docker-compose.yml
+      service: isaacsim
+    image: resim-isaacsim
+    volumes:
+      - shadercache:/shadercache
+    ports:
+      - "8443:8443/tcp"
+      - "49100:49100/tcp"
+      - "47998:47998/udp"
+
   nav2:
+    extends:
+      file: docker-compose.yml
+      service: nav2
+    image: resim-humble-nav2
     volumes:
       - ./outputs:/tmp/resim/outputs
+
+volumes:
+  shadercache:

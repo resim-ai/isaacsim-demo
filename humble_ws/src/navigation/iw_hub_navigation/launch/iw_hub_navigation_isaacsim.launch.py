@@ -1,9 +1,17 @@
-## Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
-## NVIDIA CORPORATION and its licensors retain all intellectual property
-## and proprietary rights in and to this software, related documentation
-## and any modifications thereto.  Any use, reproduction, disclosure or
-## distribution of this software and related documentation without an express
-## license agreement from NVIDIA CORPORATION is strictly prohibited.
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import os
 from ament_index_python.packages import get_package_share_directory
@@ -66,7 +74,7 @@ def generate_launch_description():
     return LaunchDescription(
         [
             # Declaring the Isaac Sim scene path. 'gui' launch argument is already used withing run_isaac_sim.launch.py
-            DeclareLaunchArgument("gui", default_value='https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.5/Isaac/Samples/ROS2/Scenario/iw_hub_warehouse_navigation.usd', description="Path to isaac sim scene"),
+            DeclareLaunchArgument("gui", default_value='https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/5.0/Isaac/Samples/ROS2/Scenario/iw_hub_warehouse_navigation.usd', description="Path to isaac sim scene"),
 
             # Include Isaac Sim launch file from isaacsim package with given launch parameters.
             IncludeLaunchDescription(
@@ -76,7 +84,7 @@ def generate_launch_description():
                     ]
                 ),
                 launch_arguments={
-                    'version': '4.5.0',
+                    'version': '5.0.0',
                     'play_sim_on_start': 'true',
                 }.items(),
             ),

@@ -1,4 +1,4 @@
-FROM 909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-isaacsim-shader-cache
+FROM 909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-isaacsim-5-0-0-shader-cache
 
 # Setup entrypoint and deps
 COPY builds/isaacsim/entrypoint.sh /
