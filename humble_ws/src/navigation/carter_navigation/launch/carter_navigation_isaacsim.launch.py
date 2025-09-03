@@ -117,42 +117,12 @@ def generate_launch_description():
             return second_node_action
 
     nav2_stack = [
-            TimerAction(period=5 * 60.0, actions=[Shutdown(reason="Job timed out.")], cancel_on_shutdown=True),
-            # # Declaring the Isaac Sim scene path. 'gui' launch argument is already used withing run_isaac_sim.launch.py
-            # DeclareLaunchArgument(
-            #     "gui",
-            #     default_value="https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/5.0/Isaac/Samples/ROS2/Scenario/carter_warehouse_navigation.usd",
-            #     description="Path to isaac sim scene",
-            # ),
-            # # Include Isaac Sim launch file from isaacsim package with given launch parameters.
-            # IncludeLaunchDescription(
-            #     PythonLaunchDescriptionSource(
-            #         [
-            #             os.path.join(
-            #                 get_package_share_directory("isaacsim"),
-            #                 "launch",
-            #                 "run_isaacsim.launch.py",
-            #             ),
-            #         ]
-            #     ),
-            #     launch_arguments={
-            #         "version": "5.0.0",
-            #         "play_sim_on_start": "true",
-            #         "install_path": "/isaac-sim",
-            #         "headless": "webrtc",
-            #     }.items(),
-            # ),
-            # DeclareLaunchArgument("map", default_value=map_dir, description="Full path to map file to load"),
-            # DeclareLaunchArgument(
-            #     "params_file", default_value=param_dir, description="Full path to param file to load"
-            # ),
-            # DeclareLaunchArgument(
-            #     "use_sim_time", default_value="true", description="Use simulation (Omniverse Isaac Sim) clock if true"
-            # ),
-            # IncludeLaunchDescription(
-            #     PythonLaunchDescriptionSource(os.path.join(nav2_bringup_launch_dir, "rviz_launch.py")),
-            #     launch_arguments={"namespace": "", "use_namespace": "False", "rviz_config": rviz_config_dir}.items(),
-            # ),
+            TimerAction(period=5 * 60.0, actions=[
+                        ExecuteProcess(
+                            cmd=["ros2", "node", "list", "|", "xargs", "-r", "ros2", "node", "kill"],
+                            shell=True
+                        ),
+            ], cancel_on_shutdown=True),
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
                     [nav2_bringup_launch_dir, "/bringup_launch.py"]
