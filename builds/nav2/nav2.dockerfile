@@ -1,7 +1,7 @@
 FROM osrf/ros:humble-desktop AS build
 
 RUN apt update && \
-	DEBIAN_FRONTEND=noninteractive apt install -y ros-humble-rosbag2-storage-mcap
+	DEBIAN_FRONTEND=noninteractive apt install -y ros-humble-rosbag2-storage-mcap python3-virtualenv python3-pip
 	
 
 WORKDIR /humble_ws
@@ -19,6 +19,7 @@ COPY humble_ws/src/moveit/isaac_moveit/package.xml ./src/moveit/isaac_moveit/pac
 COPY humble_ws/src/checklist/package.xml ./src/checklist/package.xml
 COPY humble_ws/src/humanoid_locomotion_policy_example/h1_fullbody_controller/package.xml ./src/humanoid_locomotion_policy_example/h1_fullbody_controller/package.xml
 COPY humble_ws/src/isaac_ros2_messages/package.xml ./src/isaac_ros2_messages/package.xml
+COPY humble_ws/src/metrics_emitter/package.xml ./src/metrics_emitter/package.xml
 COPY humble_ws/src/navigation/carter_navigation/package.xml ./src/navigation/carter_navigation/package.xml
 COPY humble_ws/src/navigation/iw_hub_navigation/package.xml ./src/navigation/iw_hub_navigation/package.xml
 COPY humble_ws/src/navigation/isaac_ros_navigation_goal/package.xml ./src/navigation/isaac_ros_navigation_goal/package.xml
@@ -28,6 +29,11 @@ RUN source /opt/ros/humble/setup.bash && \
     rosdep update && \
 	rosdep install -i --from-path src --rosdistro humble -y
 
+COPY /humble_ws/requirements.txt ./requirements.txt
+
+RUN	python3 -m virtualenv venv && \
+	source venv/bin/activate && \
+	pip install --no-cache-dir -r requirements.txt
 
 COPY humble_ws ./
 

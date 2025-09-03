@@ -9,11 +9,15 @@ env:
   BUILD_REPO_NAME: isaacsim-test-images
   METRICS_BUILD_REPO_NAME: isaacsim-test-images
   REGISTRY_NAME: 909785973729.dkr.ecr.us-east-1.amazonaws.com
-  RESIM_PASSWORD: ${{ secrets.RESIM_PASSWORD }}
-  RESIM_USERNAME: ${{ secrets.RESIM_USERNAME }}
+  RESIM_USERNAME: ${{ secrets.RESIM_STAGING_USERNAME }}
+  RESIM_PASSWORD: ${{ secrets.RESIM_STAGING_PASSWORD }}
   PROJECT_NAME: isaac-sim
   SIM_SYSTEM_ID: 30c93c77-9c39-4ac4-bba8-cd11159d41fa
-  SIM_TEST_SUITE: Nav2-Demo-Tests
+  SIM_TEST_SUITE: Nav2 Demo Tests
+  # For metrics 2.0
+  RESIM_URL: https://api.resim.io/v1
+  RESIM_AUTH_URL: https://resim-dev.us.auth0.com/
+  SIM_STAGING_SYSTEM_ID: 0f975cd6-209d-41c3-a33f-3ce04e078073
 
 permissions:
   id-token: write
@@ -230,7 +234,7 @@ jobs:
         run: |
           # Get the last tag (SHA tag) from the list of tags
           export SHA_TAG=$(echo "${{ steps.docker_meta.outputs.tags }}" | tail -n 1)
-          export METRICS_BUILD_ID=$(./resim-cli metrics-builds create --name "Isaac Sim Metrics Build" --version "$COMMIT_SHA" --image "$SHA_TAG" --systems $SIM_SYSTEM_ID --github | sed 's/.*=//')
+          export METRICS_BUILD_ID=$(./resim-cli metrics-builds create --name "Isaac Sim Metrics Build" --version "$COMMIT_SHA" --image "$SHA_TAG" --systems $SIM_STAGING_SYSTEM_ID --github | sed 's/.*=//')
           echo "METRICS_BUILD_ID=$METRICS_BUILD_ID" >> $GITHUB_ENV
       
       - name: Update Test Suite
@@ -275,10 +279,10 @@ jobs:
           export ISAACSIM_IMAGE=${{ needs.create-new-isaac-sim-mcb-build.outputs.image_tag }}
           export NAV2_IMAGE=${{ needs.create-new-nav2-mcb-build.outputs.image_tag }}
           ./resim-cli builds create --build-spec ./builds/docker-compose.yml --use-os-env \
-            --system $SIM_SYSTEM_ID --name "Isaac Sim Build" --description "A build of the Isaac Sim system" \
+            --system $SIM_STAGING_SYSTEM_ID --name "Isaac Sim Build" --description "A build of the Isaac Sim system" \
             --version "${{ env.COMMIT_SHA }}" --branch "${{ env.BRANCH_NAME }}" --auto-create-branch --github >> $GITHUB_OUTPUT
       
       - name: Run Suite
         run: |
           echo "Running the Isaac Sim test suite..."
-          ./resim-cli suites run --test-suite "$SIM_TEST_SUITE" --github --build-id "${{ steps.register_build.outputs.build_id }}" >> $GITHUB_OUTPUT
+          ./resim-cli suites run --test-suite "$SIM_TEST_SUITE" --github --build-id "${{ steps.register_build.outputs.build_id }}" --pool-labels 'resim:metrics2:k8s' >> $GITHUB_OUTPUT

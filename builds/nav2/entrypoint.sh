@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
 
+source /humble_ws/venv/bin/activate
 source /opt/ros/humble/setup.bash
 source /humble_ws/install/setup.bash
 

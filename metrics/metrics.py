@@ -899,7 +899,7 @@ def run_batch_metrics(args: argparse.Namespace) -> None:
         job_to_metrics, "pose_difference"
     )
 
-    # Create DataFrame for localization error statistics
+    # Create DataFrame for localization error statisticss
     localization_error_stats = pd.concat(
         [
             pd.DataFrame(

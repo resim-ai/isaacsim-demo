@@ -1,0 +1,15 @@
+version: 1
+
+topics:
+  goal_distance:
+    schema:
+      distance_m: float
+  goal_reached:
+    schema:
+      name: string
+      description: string
+      status: status
+      tags: string[]
+  time_to_goal:
+    schema:
+      time_s: float

@@ -4,7 +4,7 @@
 	"name": "Ros Jazzy",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
 	"image": "osrf/ros:humble-desktop-full",
-	"postCreateCommand": "bash -c 'apt update && apt install -y python3-pip ros-humble-rosbag2-storage-mcap && source /opt/ros/humble/setup.bash'",
+	"postCreateCommand": "bash -c 'apt update && apt install -y python3-pip python3-virtualenv ros-humble-rosbag2-storage-mcap && source /opt/ros/humble/setup.bash'",
 	"postAttachCommand": "grep -qF 'TAG' $HOME/.bashrc || echo 'source /opt/ros/humble/setup.bash # TAG' >> $HOME/.bashrc",
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
@@ -23,12 +23,6 @@
 				"ms-python.python",
 				"charliermarsh.ruff"
 			],
-			"settings": {
-				"python.analysis.extraPaths": [
-					"/opt/ros/humble/lib/python3.10/site-packages",
-					"/opt/ros/humble/local/lib/python3.10/dist-packages"
-				]
-			}
         }
     },
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
