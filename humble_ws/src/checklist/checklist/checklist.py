@@ -4,6 +4,7 @@ from tf2_msgs.msg import TFMessage
 from pathlib import Path
 from rclpy.task import Future
 
+READY_PATH = Path("/tmp/isaac_ready")
 
 class Checklist(Node):
     def __init__(self, future):
@@ -28,6 +29,7 @@ class Checklist(Node):
 
         if self.received_odom:
             self.get_logger().info("Isaac is publishing on /tf... Starting Nav2")
+            READY_PATH.touch()
             self.future.set_result(True)
 
 

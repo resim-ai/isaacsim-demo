@@ -115,7 +115,6 @@ def generate_launch_description():
             print("Condition met, launching the node.")
 
             return second_node_action
-
     nav2_stack = [
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
