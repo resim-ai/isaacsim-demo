@@ -7,6 +7,10 @@ RUN apt update && \
 WORKDIR /humble_ws
 SHELL ["/bin/bash", "-c"]
 
+
+# Layer optimization: Copy over all package xmls and run rosdep update since these change much less
+# frequently than other code.
+
 COPY humble_ws/src/isaacsim/package.xml ./src/isaacsim/package.xml
 COPY humble_ws/src/isaac_tutorials/package.xml ./src/isaac_tutorials/package.xml
 COPY humble_ws/src/custom_message/package.xml ./src/custom_message/package.xml
@@ -24,7 +28,15 @@ RUN source /opt/ros/humble/setup.bash && \
     rosdep update && \
 	rosdep install -i --from-path src --rosdistro humble -y
 
+
 COPY humble_ws ./
+
+# Rerun this in case we forgot any package xmls. Should be fast if not since we already installed
+# all the deps above.
+RUN source /opt/ros/humble/setup.bash && \
+	apt update && \
+    rosdep update && \
+	rosdep install -i --from-path src --rosdistro humble -y
 RUN source /opt/ros/humble/setup.bash && colcon build
 
 
