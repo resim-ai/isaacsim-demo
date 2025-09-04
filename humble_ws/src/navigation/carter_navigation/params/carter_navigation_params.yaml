@@ -117,18 +117,20 @@ bt_navigator_rclcpp_node:
     use_sim_time: True
 
 velocity_smoother: 
-  ros__parameters: 
+  ros__parameters:
+    use_sim_time: True
     smoothing_frequency: 20.0 
-    scale_velocities: false 
+    scale_velocities: true 
     feedback: "OPEN_LOOP" 
-    max_velocity: [2.0, 0.0, 1.08]
-    min_velocity: [-2.0, 0.0, -1.08]
+    max_velocity: [1.5, 0.0, 0.5]
+    min_velocity: [-1.5, 0.0, -0.5]
     # deadband_velocity: [0.0, 0.0, 0.0] 
     velocity_timeout: 1.0 
-    max_accel: [1.0, 0.0, 1.25]
-    max_decel: [-1.0, 0.0, -1.25]
+    max_accel: [1.0, 0.0, 1.0]
+    max_decel: [-1.0, 0.0, -1.0]
     odom_topic: "chassis/odom" 
     odom_duration: 0.1
+    # enable_stamped_cmd_vel: true
 
 controller_server:
   ros__parameters:
@@ -157,29 +159,28 @@ controller_server:
     # DWB parameters
     FollowPath:
       plugin: "nav2_mppi_controller::MPPIController"
-      time_steps: 28
+      time_steps: 56
       model_dt: 0.05
-      batch_size: 2000
+      batch_size: 1000
       vx_std: 0.4
       vy_std: 0.0
-      wz_std: 0.4
-      vx_max: 2.0
-      vx_min: -1.2
+      wz_std: 0.2
+      vx_max: 1.5
+      vx_min: -1.5
       vy_max: 0.0
-      wz_max: 1.9
-      ax_max: 2.5
-      ax_min: -2.5
+      wz_max: 0.5
+      ax_max: 1.0
+      ax_min: -1.0
       ay_min: 0.0
       ay_max: 0.0
-      az_max: 3.2
-      publish_optimal_trajectory: true
+      az_max: 1.0
       iteration_count: 1
-      prune_distance: 2.0
+      prune_distance: 2.8
       transform_tolerance: 0.1
       temperature: 0.3
       gamma: 0.015
       motion_model: "DiffDrive"
-      visualize: false
+      visualize: true
       reset_period: 1.0 # (only in Humble)
       regenerate_noises: false
       TrajectoryVisualizer:
@@ -187,9 +188,9 @@ controller_server:
         time_step: 3
       AckermannConstraints:
         min_turning_r: 0.2
-      critics: ["ConstraintCritic", "CostCritic", "GoalCritic", "GoalAngleCritic", "PathAlignCritic", "PathFollowCritic", "PathAngleCritic", "PreferForwardCritic"]
+      critics: ["ConstraintCritic", "CostCritic", "GoalCritic", "GoalAngleCritic", "PathAlignCritic", "PathFollowCritic", "PathAngleCritic", "VelocityDeadbandCritic"]
       ConstraintCritic:
-        enabled: true
+        enabled: false
         cost_power: 1
         cost_weight: 4.0
       GoalCritic:
@@ -200,12 +201,7 @@ controller_server:
       GoalAngleCritic:
         enabled: true
         cost_power: 1
-        cost_weight: 3.0
-        threshold_to_consider: 0.25
-      PreferForwardCritic:
-        enabled: true
-        cost_power: 1
-        cost_weight: 5.0
+        cost_weight: 6.0
         threshold_to_consider: 0.5
       # ObstaclesCritic:
       #   enabled: true
@@ -225,36 +221,36 @@ controller_server:
         critical_cost: 300.0
         consider_footprint: true
         collision_cost: 1000000.0
-        near_goal_distance: 0.5
+        near_goal_distance: 0.7
         trajectory_point_step: 2
       PathAlignCritic:
         enabled: true
         cost_power: 1
-        cost_weight: 14.0
+        cost_weight: 5.0
         max_path_occupancy_ratio: 0.05
         trajectory_point_step: 4
-        threshold_to_consider: 0.7
-        offset_from_furthest: 20
+        threshold_to_consider: 0.25
+        offset_from_furthest: 6
         use_path_orientations: false
       PathFollowCritic:
         enabled: true
         cost_power: 1
-        cost_weight: 5.0
+        cost_weight: 7.0
         offset_from_furthest: 5
         threshold_to_consider: 0.7
       PathAngleCritic:
         enabled: true
         cost_power: 1
         cost_weight: 3.0
-        offset_from_furthest: 4
-        threshold_to_consider: 0.5
-        max_angle_to_furthest: 1.0
-        mode: 0
-      # VelocityDeadbandCritic:
-      #   enabled: true
-      #   cost_power: 1
-      #   cost_weight: 35.0
-      #   deadband_velocities: [0.05, 0.05, 0.05]
+        offset_from_furthest: 20
+        threshold_to_consider: 0.7
+        max_angle_to_furthest: 0.785398
+        mode: 1
+      VelocityDeadbandCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 35.0
+        deadband_velocities: [0.1, 0.1, 0.1]
       # TwirlingCritic:
       #   enabled: true
       #   twirling_cost_power: 1
