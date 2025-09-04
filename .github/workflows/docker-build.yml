@@ -276,7 +276,7 @@ jobs:
           export NAV2_IMAGE=${{ needs.create-new-nav2-mcb-build.outputs.image_tag }}
           ./resim-cli builds create --build-spec ./builds/docker-compose.yml --use-os-env \
             --system $SIM_SYSTEM_ID --name "Isaac Sim Build" --description "A build of the Isaac Sim system" \
-            --version "${{ env.COMMIT_SHA }}" --branch "main" --auto-create-branch --github >> $GITHUB_OUTPUT
+            --version "${{ env.COMMIT_SHA }}" --branch "${{ env.BRANCH_NAME }}" --auto-create-branch --github >> $GITHUB_OUTPUT
       
       - name: Run Suite
         run: |
