@@ -15,6 +15,7 @@
 
 import rclpy
 from rclpy.action import ActionClient
+from rclpy.duration import Duration
 from rclpy.node import Node
 from nav2_msgs.action import NavigateToPose
 from std_msgs.msg import Header
@@ -23,7 +24,7 @@ from .goal_generators import RandomGoalGenerator, GoalReader
 import sys
 from geometry_msgs.msg import PoseWithCovarianceStamped, PoseStamped
 from custom_message.msg import GoalStatus
-import time
+import threading
 
 
 class SetNavigationGoal(Node):
@@ -90,12 +91,11 @@ class SetNavigationGoal(Node):
             # Assumption is that initial pose is set after publishing first time in this duration.
             # Can be changed to more sophisticated way. e.g. /particlecloud topic has no msg until
             # the initial pose is set.
-            time.sleep(5)
+            self.get_clock().sleep_for(Duration(seconds=2))
             self.get_logger().info("Sending first goal")
 
-
-        self.__goal_status_publisher.publish(GoalStatus(header=Header(stamp=self.get_clock().now().to_msg()), status="NEW_GOAL"))
         self._action_client.wait_for_server()
+        self.__goal_status_publisher.publish(GoalStatus(header=Header(stamp=self.get_clock().now().to_msg()), status="NEW_GOAL"))
         goal_msg = self.__get_goal()
 
         if goal_msg is None:
@@ -221,8 +221,16 @@ class SetNavigationGoal(Node):
 def main():
     rclpy.init()
     set_goal = SetNavigationGoal()
+
+    # Spin in a separate thread
+    thread = threading.Thread(target=rclpy.spin, args=(set_goal, ), daemon=True)
+    thread.start()
+
     result = set_goal.send_goal()
-    rclpy.spin(set_goal)
+    
+    thread.join()
+    set_goal.destroy_node()
+    rclpy.shutdown()
 
 
 if __name__ == "__main__":

@@ -163,6 +163,8 @@ jobs:
   create-new-isaac-sim-metrics-build:
     name: Create New Isaac Sim Metrics Build
     runs-on: ubuntu-latest
+    outputs:
+      metrics_build_id: ${{ steps.register_metrics_build.outputs.metrics_build_id }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -236,6 +238,7 @@ jobs:
           export SHA_TAG=$(echo "${{ steps.docker_meta.outputs.tags }}" | tail -n 1)
           export METRICS_BUILD_ID=$(./resim-cli metrics-builds create --name "Isaac Sim Metrics Build" --version "$COMMIT_SHA" --image "$SHA_TAG" --systems $SIM_STAGING_SYSTEM_ID --github | sed 's/.*=//')
           echo "METRICS_BUILD_ID=$METRICS_BUILD_ID" >> $GITHUB_ENV
+          echo "metrics_build_id=$METRICS_BUILD_ID" >> $GITHUB_OUTPUT
       
       - name: Update Test Suite
         if: env.CHANGED == 'true'
@@ -285,4 +288,5 @@ jobs:
       - name: Run Suite
         run: |
           echo "Running the Isaac Sim test suite..."
-          ./resim-cli suites run --test-suite "$SIM_TEST_SUITE" --github --build-id "${{ steps.register_build.outputs.build_id }}" --pool-labels 'resim:metrics2:k8s' >> $GITHUB_OUTPUT
+          ./resim-cli suites run --test-suite "$SIM_TEST_SUITE" --build-id "${{ steps.register_build.outputs.build_id }}" \
+            --pool-labels 'resim:metrics2:k8s' --github >> $GITHUB_OUTPUT

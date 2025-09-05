@@ -21,7 +21,7 @@ metrics:
   Distance to Goal:
     type: test
     description: Distance to each goal over time, measured from odometry. Each line represents a different goal.
-    query_string: SELECT goal_name as group_name, timestamp AS "Time (s)", distance_m as "Distance to Goal (m)" FROM goal_distance
+    query_string: SELECT goal_name as group_name, timestamp / 1E9 AS "Time (s)", distance_m as "Distance to Goal (m)" FROM goal_distance
     template_type: system
     template: line
   Time to reach final goal:
@@ -30,3 +30,9 @@ metrics:
     query_string: SELECT sum(time_s) FROM time_to_goal
     template_type: system
     template: scalar
+
+metrics sets:
+  Nav2 Metrics:
+    metrics:
+      - Distance to Goal
+      - Time to reach final goal

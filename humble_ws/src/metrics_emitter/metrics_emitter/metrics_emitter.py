@@ -29,7 +29,7 @@ class MetricsEmitter(Node):
         callback_group = MutuallyExclusiveCallbackGroup() # ensure callbacks are not called concurrently
         self.goal_subscriber = self.create_subscription(PoseStamped, '/goal', self.goal_callback, 10, callback_group=callback_group)
         self.goal_status_subscriber = self.create_subscription(GoalStatus, '/goal/status', self.goal_status_callback, 10, callback_group=callback_group)
-        self.chassis_odom_subscriber = self.create_subscription(Odometry, '/chassis/odom', self.chassis_odom_callback, 1, callback_group=callback_group)
+        self.chassis_odom_subscriber = self.create_subscription(Odometry, '/chassis/odom', self.chassis_odom_callback, 10, callback_group=callback_group)
 
         self.first_goal_received_time: Optional[Time] = None
         self.prev_goal_received_time: Optional[Time] = None
@@ -40,7 +40,7 @@ class MetricsEmitter(Node):
         
         # State for goal completion tracking
         self.goal_count = 0
-        self.completed_goals = 0
+        self.completed_goals = -1
         
         # Rate limiting for odometry processing (10Hz = 0.1 seconds)
         self.odom_processing_rate = 0.1  # seconds between processing
@@ -99,7 +99,7 @@ class MetricsEmitter(Node):
         self.current_goal = msg
         self.goal_count += 1
         
-        self.get_logger().info(f"New goal received (#{self.goal_count}) in frame: {msg.header.frame_id}")
+        self.get_logger().info(f"New goal received (#{self.goal_count}) at time {msg.header.stamp.sec}.{msg.header.stamp.nanosec} in frame: {msg.header.frame_id}")
         
         # Store the first goal received time
         new_goal_time = Time.from_msg(msg.header.stamp)
@@ -130,13 +130,12 @@ class MetricsEmitter(Node):
 
     def goal_status_callback(self, msg: GoalStatus):
         """Handle goal status messages."""
-        self.get_logger().info("Received goal status message.")
+        self.get_logger().info(f"Received goal status message at {msg.header.stamp.sec}.{msg.header.stamp.nanosec}")
+        self.completed_goals += 1
 
         # A NEW_GOAL message is sent for the first goal, so we skip
-        if self.first_goal_received_time is None or self.prev_goal_received_time is None:
+        if self.completed_goals == 0:
             return
-
-        self.completed_goals += 1
         
         # Calculate timestamp relative to first goal received time
         relative_timestamp = self.get_relative_timestamp(msg.header.stamp)
@@ -181,6 +180,7 @@ class MetricsEmitter(Node):
             
             # messages may be out of order, so we skip if the current time is before the previous goal received time
             if current_time_ns < self.prev_goal_received_time.nanoseconds:
+                self.get_logger().warn(f"Skipping odom message to prevent time travel.")
                 return
 
             # Calculate distance using odom coordinates (2D distance)
@@ -191,10 +191,11 @@ class MetricsEmitter(Node):
             # Calculate timestamp relative to first goal received time
             relative_timestamp = self.get_relative_timestamp(msg.header.stamp)
             if relative_timestamp is None:
+                self.get_logger().warn(f"Could not calculate timestamp relative to first goal received time.")
                 return
             
             # Emit the distance metric
-            emit('goal_distance', {'distance_m': distance, 'goal_name': f'Goal {self.completed_goals}'}, timestamp=relative_timestamp, file=self.emissions_handle)
+            emit('goal_distance', {'distance_m': distance, 'goal_name': f'Goal {self.goal_count}'}, timestamp=relative_timestamp, file=self.emissions_handle)
             
             # Update the last processed time for rate limiting
             self.last_odom_processed_time = current_time
