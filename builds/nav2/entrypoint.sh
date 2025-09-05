@@ -32,4 +32,5 @@ while [ $SECONDS -lt $TIMEOUT ]; do
 done
 
 echo "Timeout reached (${TIMEOUT}s), exiting."
+echo $TIMEOUT > /tmp/resim/outputs/internal_timeout
 exit 0
