@@ -4,7 +4,9 @@ topics:
   goal_distance:
     schema:
       distance_m: float
+      goal_name: string
   goal_reached:
+    event: true
     schema:
       name: string
       description: string
@@ -13,3 +15,18 @@ topics:
   time_to_goal:
     schema:
       time_s: float
+      goal_name: string
+
+metrics:
+  Distance to Goal:
+    type: test
+    description: Distance to each goal over time, measured from odometry. Each line represents a different goal.
+    query_string: SELECT goal_name as group_name, timestamp AS "Time (s)", distance_m as "Distance to Goal (m)" FROM goal_distance
+    template_type: system
+    template: line
+  Time to reach final goal:
+    type: test
+    description: Time between receiving first goal and reaching final goal.
+    query_string: SELECT sum(time_s) FROM time_to_goal
+    template_type: system
+    template: scalar

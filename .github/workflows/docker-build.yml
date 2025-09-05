@@ -13,7 +13,7 @@ env:
   RESIM_PASSWORD: ${{ secrets.RESIM_STAGING_PASSWORD }}
   PROJECT_NAME: isaac-sim
   SIM_SYSTEM_ID: 30c93c77-9c39-4ac4-bba8-cd11159d41fa
-  SIM_TEST_SUITE: Nav2 Demo Tests
+  SIM_TEST_SUITE: Nav2 Smoke
   # For metrics 2.0
   RESIM_URL: https://api.resim.io/v1
   RESIM_AUTH_URL: https://resim-dev.us.auth0.com/
@@ -194,7 +194,7 @@ jobs:
         id: check_changes
         run: |
           git fetch origin ${{ github.base_ref }} --depth=1
-          if git diff --quiet origin/${{ github.base_ref }} HEAD -- metrics; then
+          if git diff --quiet origin/${{ github.base_ref }} HEAD -- metrics humble_ws/src/custom_message .github; then
             echo "CHANGED=false" >> $GITHUB_ENV
           else
             echo "CHANGED=true" >> $GITHUB_ENV
@@ -215,7 +215,7 @@ jobs:
         id: build-push-build
         uses: docker/build-push-action@v5
         with:
-          context: metrics
+          context: .
           file: ./metrics/Dockerfile
           push: true
           tags: ${{ steps.docker_meta.outputs.tags }}

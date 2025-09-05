@@ -15,5 +15,6 @@
         "/opt/ros/humble/lib/python3.10/site-packages",
         "/opt/ros/humble/local/lib/python3.10/dist-packages",
         "${workspaceFolder}/humble_ws/venv/lib/python3.10/site-packages",
+        "${workspaceFolder}/humble_ws/install/custom_message/local/lib/python3.10/dist-packages",
     ],
 }

@@ -20,10 +20,11 @@ from tf2_msgs.msg import TFMessage
 from tf2_ros import Buffer
 import tf2_geometry_msgs
 from rclpy.time import Time, Duration
-from example_interfaces.msg import String
+from custom_message.msg import GoalStatus
 
 import resim.metrics.fetch_job_metrics as fjm
 from resim.metrics.fetch_all_pages import fetch_all_pages
+from resim.metrics.fetch_job_metrics import fetch_job_metrics
 from resim_python_client import AuthenticatedClient
 from resim_python_client.api.batches import list_jobs
 
@@ -612,13 +613,13 @@ def add_time_to_goal_metric(writer: ResimMetricsWriter, input_bag: Path):
         with open(TIMEOUT_PATH, "r", encoding='utf-8') as fp:
             maybe_timeout = int(fp.read())
 
-    msg: String
+    msg: GoalStatus
     for _, msg, timestamp in read_messages(
         str(input_bag), ["/goal/status"]
     ):
-        if msg.data == "NEW_GOAL":
+        if msg.status == "NEW_GOAL":
             first_goal_timestamp = min(first_goal_timestamp, timestamp)
-        elif msg.data == "COMPLETE":
+        elif msg.status == "COMPLETE":
             assert end_timestamp == 0.0, "/goal/status COMPLETE message seen more than once."
             end_timestamp = timestamp
     
