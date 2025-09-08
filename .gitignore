@@ -9,3 +9,7 @@ jazzy_ws/install
 jazzy_ws/log
 build_ws/jazzy
 build_ws/humble
+
+# Emacs
+*~
+.#*
