@@ -195,7 +195,7 @@ class MetricsEmitter(Node):
                 return
             
             # Emit the distance metric
-            emit('goal_distance', {'distance_m': distance, 'goal_name': f'Goal {self.goal_count}'}, timestamp=relative_timestamp, file=self.emissions_handle)
+            emit('goal_distance_1', {'distance_m': distance, 'goal_name': f'Goal {self.goal_count}'}, timestamp=relative_timestamp, file=self.emissions_handle)
             
             # Update the last processed time for rate limiting
             self.last_odom_processed_time = current_time
