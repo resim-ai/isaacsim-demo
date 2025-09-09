@@ -555,7 +555,7 @@ Visualization Manager:
             Value: /local_plan
           Value: true
         - Class: rviz_default_plugins/MarkerArray
-          Enabled: false
+          Enabled: true
           Name: Trajectories
           Namespaces:
             {}
@@ -564,7 +564,7 @@ Visualization Manager:
             Durability Policy: Volatile
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /marker
+            Value: /trajectories
           Value: false
         - Alpha: 1
           Class: rviz_default_plugins/Polygon

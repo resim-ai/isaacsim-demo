@@ -115,71 +115,73 @@ def generate_launch_description():
             print("Condition met, launching the node.")
 
             return second_node_action
+        
     nav2_stack = [
-            IncludeLaunchDescription(
-                PythonLaunchDescriptionSource(
-                    [nav2_bringup_launch_dir, "/bringup_launch.py"]
-                ),
-                launch_arguments={
-                    "map": map_dir,
-                    "use_sim_time": use_sim_time,
-                    "params_file": param_dir,
-                }.items(),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                [nav2_bringup_launch_dir, "/bringup_launch.py"]
             ),
-            Node(
-                name="image_throttler",
-                package="topic_tools",
-                executable="throttle",
-                output="screen",
-                arguments=["messages", "/front_stereo_camera/left/image_raw", "5.0", "/front_stereo_camera/left/image_raw_throttled"]
-            ),
-            Node(
-                package="pointcloud_to_laserscan",
-                executable="pointcloud_to_laserscan_node",
-                remappings=[
-                    ("cloud_in", ["/front_3d_lidar/lidar_points"]),
-                    ("scan", ["/scan"]),
-                ],
-                parameters=[
-                    {
-                        "target_frame": "front_3d_lidar",
-                        "transform_tolerance": 0.01,
-                        "min_height": -0.4,
-                        "max_height": 1.5,
-                        "angle_min": -1.5708,  # -M_PI/2
-                        "angle_max": 1.5708,  # M_PI/2
-                        "angle_increment": 0.0087,  # M_PI/360.0
-                        "scan_time": 0.3333,
-                        "range_min": 0.05,
-                        "range_max": 100.0,
-                        "use_inf": True,
-                        "inf_epsilon": 1.0,
-                        # 'concurrency_level': 1,
-                    }
-                ],
-                name="pointcloud_to_laserscan",
-            ),
-            # Launch recorder and automatic goal generator node when Isaac Sim has finished loading.
-            RegisterEventHandler(
-                OnProcessIO(
-                    on_stderr=lambda event: execute_second_node_if_condition_met(
-                        event,
-                        ld_record_and_start,
-                        "[global_costmap.global_costmap]: start",
-                    )
-                )
-            ),
-            # Shut down when all goals reached
-            RegisterEventHandler(
-                OnProcessIO(
-                    on_stderr=lambda event: execute_second_node_if_condition_met(
-                        event,
-                        TimerAction(period=5.0, actions=[Shutdown(reason="All goals completed.")]),
-                        "All goals reached.",
-                    )
+            launch_arguments={
+                "map": map_dir,
+                "use_sim_time": use_sim_time,
+                "params_file": param_dir,
+            }.items(),
+        ),
+        Node(
+            name="image_throttler",
+            package="topic_tools",
+            executable="throttle",
+            output="screen",
+            arguments=["messages", "/front_stereo_camera/left/image_raw", "5.0", "/front_stereo_camera/left/image_raw_throttled"]
+        ),
+        Node(
+            package="pointcloud_to_laserscan",
+            executable="pointcloud_to_laserscan_node",
+            remappings=[
+                ("cloud_in", ["/front_3d_lidar/lidar_points"]),
+                ("scan", ["/scan"]),
+            ],
+            parameters=[
+                {
+                    "use_sim_time": True,
+                    "target_frame": "front_3d_lidar",
+                    "transform_tolerance": 0.01,
+                    "min_height": -0.4,
+                    "max_height": 1.5,
+                    "angle_min": -1.5708,  # -M_PI/2
+                    "angle_max": 1.5708,  # M_PI/2
+                    "angle_increment": 0.0087,  # M_PI/360.0
+                    "scan_time": 0.3333,
+                    "range_min": 0.05,
+                    "range_max": 100.0,
+                    "use_inf": True,
+                    "inf_epsilon": 1.0,
+                    # 'concurrency_level': 1,
+                }
+            ],
+            name="pointcloud_to_laserscan",
+        ),
+        # Launch recorder and automatic goal generator node when Isaac Sim has finished loading.
+        RegisterEventHandler(
+            OnProcessIO(
+                on_stderr=lambda event: execute_second_node_if_condition_met(
+                    event,
+                    ld_record_and_start,
+                    "[global_costmap.global_costmap]: start",
                 )
             )
-        ]
+        ),
+        # Shut down when all goals reached
+        RegisterEventHandler(
+            OnProcessIO(
+                on_stderr=lambda event: execute_second_node_if_condition_met(
+                    event,
+                    TimerAction(period=5.0, actions=[Shutdown(reason="All goals completed.")]),
+                    "All goals reached.",
+                )
+            )
+        )
+    ]
     checklist_node = Node(
         package='checklist',
         executable='checklist',
