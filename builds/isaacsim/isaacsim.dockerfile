@@ -1,4 +1,4 @@
-FROM 909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-isaacsim-5-0-0-resim-eks-gpu-20250814124908-shader-cache
+FROM public.ecr.aws/resim/isaac-sim-resim-shaders:5.0.0
 
 # Setup entrypoint and deps
 COPY builds/isaacsim/entrypoint.sh /
