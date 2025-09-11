@@ -13,7 +13,7 @@ env:
   RESIM_PASSWORD: ${{ secrets.RESIM_STAGING_PASSWORD }}
   PROJECT_NAME: isaac-sim
   SIM_SYSTEM_ID: 30c93c77-9c39-4ac4-bba8-cd11159d41fa
-  SIM_TEST_SUITE: Nav2 Smoke
+  SIM_TEST_SUITE: Nav2 Demo Tests
   # For metrics 2.0
   RESIM_URL: https://api.resim.io/v1
   RESIM_AUTH_URL: https://resim-dev.us.auth0.com/
@@ -275,6 +275,10 @@ jobs:
       - name: Select Project
         run: |
           ./resim-cli projects select $PROJECT_NAME
+
+      - name: Sync metrics config
+        run: |
+          ./resim-cli metrics sync
 
       - name: Register Isaac Sim Build in ReSim
         id: register_build

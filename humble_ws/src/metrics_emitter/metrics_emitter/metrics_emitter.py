@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import Optional
-from geometry_msgs.msg import PoseStamped, Pose
+from geometry_msgs.msg import PoseWithCovarianceStamped, Pose, PoseStamped
 from nav_msgs.msg import Odometry
 import rclpy
 from rclpy.node import Node
@@ -18,8 +18,8 @@ class MetricsEmitter(Node):
         super().__init__('metrics_emitter')
         self.get_logger().info('Metrics emitter node initialized')
 
-        os.makedirs("/tmp/resim/outputs", exist_ok=True)
-        self.emissions_handle = Path('/tmp/resim/outputs/emissions.ndjson').open('a')
+        os.makedirs("/tmp/resim/outputs/ignore", exist_ok=True)
+        self.emissions_handle = Path('/tmp/resim/outputs/ignore/emissions.ndjson').open('a')
 
         # build transform buffer
         self.tf_buffer = Buffer()
@@ -30,6 +30,9 @@ class MetricsEmitter(Node):
         self.goal_subscriber = self.create_subscription(PoseStamped, '/goal', self.goal_callback, 10, callback_group=callback_group)
         self.goal_status_subscriber = self.create_subscription(GoalStatus, '/goal/status', self.goal_status_callback, 10, callback_group=callback_group)
         self.chassis_odom_subscriber = self.create_subscription(Odometry, '/chassis/odom', self.chassis_odom_callback, 10, callback_group=callback_group)
+        
+        # data for pose difference metric
+        self.amcl_subscriber = self.create_subscription(PoseWithCovarianceStamped, '/amcl_pose', self.amcl_callback, 10, callback_group=callback_group)
 
         self.first_goal_received_time: Optional[Time] = None
         self.prev_goal_received_time: Optional[Time] = None
@@ -41,6 +44,9 @@ class MetricsEmitter(Node):
         # State for goal completion tracking
         self.goal_count = 0
         self.completed_goals = -1
+        
+        # State for pose difference metric
+        self.latest_odom: Optional[Odometry] = None
         
         # Rate limiting for odometry processing (10Hz = 0.1 seconds)
         self.odom_processing_rate = 0.1  # seconds between processing
@@ -150,7 +156,11 @@ class MetricsEmitter(Node):
             'tags': ['navigation']
         }, event=True, timestamp=relative_timestamp, file=self.emissions_handle)
 
-        time_to_goal_seconds = (relative_timestamp - (self.prev_goal_received_time.nanoseconds - self.first_goal_received_time.nanoseconds)) / 1e9
+        if self.prev_goal_received_time is not None and self.first_goal_received_time is not None:
+            time_to_goal_seconds = (relative_timestamp - (self.prev_goal_received_time.nanoseconds - self.first_goal_received_time.nanoseconds)) / 1e9
+        else:
+            self.get_logger().warn("Cannot calculate time to goal: missing timestamp data")
+            return
 
         emit('time_to_goal', {
             'time_s': time_to_goal_seconds,
@@ -164,6 +174,9 @@ class MetricsEmitter(Node):
 
     def chassis_odom_callback(self, msg: Odometry):
         """Handle odometry messages and calculate distance to goal at 10Hz."""
+        # Store latest odometry for pose difference calculation
+        self.latest_odom = msg
+        
         # Only calculate distance if we have a transformed goal
         if self.transformed_goal is None or self.first_goal_received_time is None or self.prev_goal_received_time is None:
             return
@@ -204,6 +217,56 @@ class MetricsEmitter(Node):
             
         except Exception as ex:
             self.get_logger().warn(f'Could not calculate distance to goal: {ex}')
+
+    def amcl_callback(self, msg: PoseWithCovarianceStamped):
+        """Handle AMCL pose messages and calculate pose difference."""
+        # Only calculate pose difference if we have latest odometry and first goal time is set
+        if self.latest_odom is None or self.first_goal_received_time is None:
+            return
+
+        try:
+            # Get AMCL pose position (already in map frame)
+            amcl_pos = msg.pose.pose.position
+            
+            # Transform odometry pose to map frame
+            odom_pose = self.latest_odom.pose.pose
+            odom_header = self.latest_odom.header
+            
+            # Get transform from odom frame to map frame at AMCL timestamp
+            transform = self.tf_buffer.lookup_transform(
+                msg.header.frame_id,  # target frame (typically "map")
+                odom_header.frame_id,  # source frame (typically "odom")
+                Time.from_msg(msg.header.stamp),
+                timeout=Duration(seconds=1)
+            )
+            
+            # Transform the odometry pose to map frame
+            odom_pose_stamped = PoseStamped()
+            odom_pose_stamped.header = odom_header
+            odom_pose_stamped.pose = odom_pose
+            odom_in_map = tf2_geometry_msgs.do_transform_pose_stamped(odom_pose_stamped, transform)
+            odom_pos = odom_in_map.pose.position
+            
+            # Calculate 3D position difference
+            pos_diff = ((amcl_pos.x - odom_pos.x) ** 2 + 
+                       (amcl_pos.y - odom_pos.y) ** 2 + 
+                       (amcl_pos.z - odom_pos.z) ** 2) ** 0.5
+            
+            # Calculate timestamp relative to first goal received time
+            relative_timestamp = self.get_relative_timestamp(msg.header.stamp)
+            if relative_timestamp is None:
+                self.get_logger().warn(f"Could not calculate timestamp relative to first goal received time.")
+                return
+            
+            # Emit the pose difference metric
+            emit('pose_difference', {
+                'position_diff_m': pos_diff
+            }, timestamp=relative_timestamp, file=self.emissions_handle)
+            
+            self.get_logger().debug(f"Pose difference: {pos_diff:.3f}m")
+            
+        except Exception as ex:
+            self.get_logger().warn(f'Could not calculate pose difference: {ex}')
 
 
 def main(args=None):

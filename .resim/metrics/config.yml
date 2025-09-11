@@ -16,12 +16,39 @@ topics:
     schema:
       time_s: float
       goal_name: string
+  pose_difference:
+    schema:
+      position_diff_m: float
+  camera_gif:
+    schema:
+      filename: string
+  robot_trajectory:
+    schema:
+      raw_metric: string
 
 metrics:
+  Stereo Camera Feed:
+    type: test
+    description: Camera feed from navigation, sped up 2x, starting after first goal received.
+    query_string: SELECT filename FROM camera_gif
+    template_type: system
+    template: image
   Distance to Goal:
     type: test
     description: Distance to each goal over time, measured from odometry. Each line represents a different goal.
     query_string: SELECT goal_name as group_name, timestamp / 1E9 AS "Time (s)", distance_m as "Distance to Goal (m)" FROM goal_distance_1
+    template_type: system
+    template: line
+  Robot Trajectory:
+    type: test
+    description: Top-down view of the robot's trajectory throughout the run, with goal points marked as yellow arrows.
+    query_string: SELECT raw_metric FROM robot_trajectory
+    template_type: custom
+    template_file: raw.liquid
+  Localization Error:
+    type: test
+    description: Difference in position between odometry and AMCL localization poses over time.
+    query_string: SELECT 'Error', timestamp / 1E9 AS "Time (s)", position_diff_m as "Position Difference (m)" FROM pose_difference
     template_type: system
     template: line
   Time to reach final goal:
@@ -42,19 +69,29 @@ metrics:
     description: Time spent within 0.5m of each goal for each job
     query_string: |
       SELECT 
-        experience_name,
-        goal_name,
-        SUM(
+        goal_name as "Goal Name",
+        experience_id as "Experience ID",
+        SUM(time_diff) as "Dwelling Time (s)"
+      FROM (
+        SELECT 
+          experience_id,
+          goal_name,
           CASE 
-            WHEN distance_m <= 0.5 AND LAG(timestamp / 1E9) OVER (PARTITION BY experience_name, goal_name ORDER BY timestamp) IS NOT NULL
-            THEN (timestamp / 1E9) - LAG(timestamp / 1E9) OVER (PARTITION BY experience_name, goal_name ORDER BY timestamp)
+            WHEN distance_m <= 0.5 AND LAG(timestamp / 1E9) OVER (PARTITION BY experience_id, goal_name ORDER BY timestamp) IS NOT NULL
+            THEN (timestamp / 1E9) - LAG(timestamp / 1E9) OVER (PARTITION BY experience_id, goal_name ORDER BY timestamp)
             ELSE 0 
-          END
-        ) as dwelling_time_s
-      FROM goal_distance_1
-      WHERE distance_m <= 0.5
-      GROUP BY experience_name, goal_name
-      ORDER BY experience_name, goal_name
+          END as time_diff
+        FROM goal_distance_1
+        WHERE distance_m <= 0.5
+      ) dwelling_periods
+      GROUP BY experience_id, goal_name
+      ORDER BY experience_id, goal_name
+    template_type: system
+    template: bar
+  Maximum Localization Error:
+    type: batch
+    description: Maximum position difference between odometry and AMCL localization across all experiences.
+    query_string: SELECT 'Maximum', experience_id as "Experience ID", MAX(position_diff_m) as "Maximum Localization Error (m)" FROM pose_difference GROUP BY experience_id ORDER BY experience_id
     template_type: system
     template: bar
 
@@ -62,8 +99,12 @@ metrics sets:
   Nav2 Metrics:
     metrics:
       # Job metrics
+      - Stereo Camera Feed
       - Distance to Goal
+      - Robot Trajectory
+      - Localization Error
       - Time to reach final goal
       # Batch metrics
       - Goal Dwelling Time
       - Total time to reach final Goal
+      - Maximum Localization Error

@@ -11,6 +11,7 @@ import cv2
 import numpy as np
 import imageio
 import rclpy.serialization
+from resim.metrics.python.emissions import emit
 from rosidl_runtime_py.utilities import get_message
 import rosbag2_py
 from nav_msgs.msg import Odometry
@@ -455,6 +456,9 @@ def add_camera_gif_metric(
         .with_importance(MetricImportance.ZERO_IMPORTANCE)
         .with_image_data(data)
     )
+    emit('camera_gif', {
+        'filename': str(output_path.name)
+    })
 
 
 def radians_down_to_up_to_degrees(radians):
@@ -602,6 +606,9 @@ def add_robot_trajectory_metric(
         .with_importance(MetricImportance.HIGH_IMPORTANCE)
         .with_status(MetricStatus.PASSED_METRIC_STATUS)
     )
+    emit('robot_trajectory', {
+        'raw_metric': str(fig.to_json())
+    })
 
 def add_time_to_goal_metric(writer: ResimMetricsWriter, input_bag: Path):
     first_goal_timestamp: float = math.inf
