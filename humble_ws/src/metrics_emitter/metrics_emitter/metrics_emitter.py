@@ -11,6 +11,7 @@ from resim.metrics.python.emissions import emit
 from tf2_ros import Buffer, TransformListener, Duration
 import tf2_geometry_msgs
 import os
+import math
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 
 class MetricsEmitter(Node):
@@ -219,14 +220,15 @@ class MetricsEmitter(Node):
             self.get_logger().warn(f'Could not calculate distance to goal: {ex}')
 
     def amcl_callback(self, msg: PoseWithCovarianceStamped):
-        """Handle AMCL pose messages and calculate pose difference."""
+        """Handle AMCL pose messages and calculate pose difference and covariance analysis."""
         # Only calculate pose difference if we have latest odometry and first goal time is set
         if self.latest_odom is None or self.first_goal_received_time is None:
             return
 
         try:
-            # Get AMCL pose position (already in map frame)
+            # Get AMCL pose position and orientation (already in map frame)
             amcl_pos = msg.pose.pose.position
+            amcl_orient = msg.pose.pose.orientation
             
             # Transform odometry pose to map frame
             odom_pose = self.latest_odom.pose.pose
@@ -246,11 +248,65 @@ class MetricsEmitter(Node):
             odom_pose_stamped.pose = odom_pose
             odom_in_map = tf2_geometry_msgs.do_transform_pose_stamped(odom_pose_stamped, transform)
             odom_pos = odom_in_map.pose.position
+            odom_orient = odom_in_map.pose.orientation
             
-            # Calculate 3D position difference
-            pos_diff = ((amcl_pos.x - odom_pos.x) ** 2 + 
-                       (amcl_pos.y - odom_pos.y) ** 2 + 
-                       (amcl_pos.z - odom_pos.z) ** 2) ** 0.5
+            # Calculate position differences
+            dx = amcl_pos.x - odom_pos.x
+            dy = amcl_pos.y - odom_pos.y
+            dz = amcl_pos.z - odom_pos.z
+            pos_diff = (dx ** 2 + dy ** 2 + dz ** 2) ** 0.5
+            
+            # Calculate yaw differences
+            def quaternion_to_yaw(q):
+                return math.atan2(2.0 * (q.w * q.z + q.x * q.y), 1.0 - 2.0 * (q.y * q.y + q.z * q.z))
+            
+            amcl_yaw = quaternion_to_yaw(amcl_orient)
+            odom_yaw = quaternion_to_yaw(odom_orient)
+            dyaw = amcl_yaw - odom_yaw
+            # Normalize angle difference to [-pi, pi]
+            while dyaw > math.pi:
+                dyaw -= 2 * math.pi
+            while dyaw < -math.pi:
+                dyaw += 2 * math.pi
+            
+            # Extract covariance components (6x6 matrix flattened to 36 elements)
+            # For ground robots, relevant components are typically:
+            # [0] = x variance, [7] = y variance, [35] = yaw variance
+            # [1] = x-y covariance, [5] = x-yaw covariance, [29] = y-yaw covariance
+            covariance = msg.pose.covariance
+            cov_x = covariance[0]       # x position variance
+            cov_y = covariance[7]       # y position variance  
+            cov_yaw = covariance[35]    # yaw variance
+            cov_xy = covariance[1]      # x-y covariance
+            cov_x_yaw = covariance[5]   # x-yaw covariance
+            cov_y_yaw = covariance[29]  # y-yaw covariance
+            
+            # Calculate uncertainty measures
+            pos_uncertainty = (cov_x + cov_y) ** 0.5  # Combined position uncertainty
+            yaw_uncertainty = cov_yaw ** 0.5 if cov_yaw > 0 else 0.0
+            
+            # Calculate normalized residuals (error relative to predicted uncertainty)
+            normalized_x = dx / (cov_x ** 0.5) if cov_x > 0 else 0.0
+            normalized_y = dy / (cov_y ** 0.5) if cov_y > 0 else 0.0
+            normalized_yaw = dyaw / (cov_yaw ** 0.5) if cov_yaw > 0 else 0.0
+            
+            # Calculate Mahalanobis distance for position (accounts for correlations)
+            mahalanobis_dist = 0.0
+            if cov_x > 0 and cov_y > 0:
+                det = cov_x * cov_y - cov_xy * cov_xy
+                if det > 0:
+                    inv_cov_xx = cov_y / det
+                    inv_cov_yy = cov_x / det
+                    inv_cov_xy = -cov_xy / det
+                    mahalanobis_dist = (dx*dx*inv_cov_xx + dy*dy*inv_cov_yy + 2*dx*dy*inv_cov_xy) ** 0.5
+            
+            # Calculate consistency checks (should be ~1.0 for well-calibrated covariance)
+            normalized_innovation_squared = normalized_x**2 + normalized_y**2
+            
+            # Check if errors fall within confidence intervals
+            within_1_sigma = abs(normalized_x) <= 1.0 and abs(normalized_y) <= 1.0 and abs(normalized_yaw) <= 1.0
+            within_2_sigma = abs(normalized_x) <= 2.0 and abs(normalized_y) <= 2.0 and abs(normalized_yaw) <= 2.0
+            within_3_sigma = abs(normalized_x) <= 3.0 and abs(normalized_y) <= 3.0 and abs(normalized_yaw) <= 3.0
             
             # Calculate timestamp relative to first goal received time
             relative_timestamp = self.get_relative_timestamp(msg.header.stamp)
@@ -258,15 +314,40 @@ class MetricsEmitter(Node):
                 self.get_logger().warn(f"Could not calculate timestamp relative to first goal received time.")
                 return
             
-            # Emit the pose difference metric
+            # Emit the original pose difference metric
             emit('pose_difference', {
                 'position_diff_m': pos_diff
             }, timestamp=relative_timestamp, file=self.emissions_handle)
             
-            self.get_logger().debug(f"Pose difference: {pos_diff:.3f}m")
+            # Emit comprehensive covariance analysis metrics
+            emit('localization_uncertainty', {
+                'position_uncertainty_m': pos_uncertainty,
+                'yaw_uncertainty_rad': yaw_uncertainty,
+                'cov_x': cov_x,
+                'cov_y': cov_y,
+                'cov_yaw': cov_yaw,
+                'cov_xy': cov_xy
+            }, timestamp=relative_timestamp, file=self.emissions_handle)
+            
+            emit('covariance_accuracy', {
+                'position_error_m': pos_diff,
+                'yaw_error_rad': abs(dyaw),
+                'normalized_x': normalized_x,
+                'normalized_y': normalized_y,
+                'normalized_yaw': normalized_yaw,
+                'mahalanobis_distance': mahalanobis_dist,
+                'normalized_innovation_squared': normalized_innovation_squared,
+                'within_1_sigma': int(within_1_sigma),
+                'within_2_sigma': int(within_2_sigma),
+                'within_3_sigma': int(within_3_sigma)
+            }, timestamp=relative_timestamp, file=self.emissions_handle)
+            
+            self.get_logger().debug(f"Pose diff: {pos_diff:.3f}m, Pos uncertainty: {pos_uncertainty:.3f}m, "
+                                  f"Normalized residuals: x={normalized_x:.2f}, y={normalized_y:.2f}, "
+                                  f"Mahalanobis: {mahalanobis_dist:.2f}")
             
         except Exception as ex:
-            self.get_logger().warn(f'Could not calculate pose difference: {ex}')
+            self.get_logger().warn(f'Could not calculate pose difference and covariance analysis: {ex}')
 
 
 def main(args=None):

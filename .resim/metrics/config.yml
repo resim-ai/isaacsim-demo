@@ -19,6 +19,26 @@ topics:
   pose_difference:
     schema:
       position_diff_m: float
+  localization_uncertainty:
+    schema:
+      position_uncertainty_m: float
+      yaw_uncertainty_rad: float
+      cov_x: float
+      cov_y: float
+      cov_yaw: float
+      cov_xy: float
+  covariance_accuracy:
+    schema:
+      position_error_m: float
+      yaw_error_rad: float
+      normalized_x: float
+      normalized_y: float
+      normalized_yaw: float
+      mahalanobis_distance: float
+      normalized_innovation_squared: float
+      within_1_sigma: int
+      within_2_sigma: int
+      within_3_sigma: int
   camera_gif:
     schema:
       filename: string
@@ -94,6 +114,60 @@ metrics:
     query_string: SELECT 'Maximum', experience_id as "Experience ID", MAX(position_diff_m) as "Maximum Localization Error (m)" FROM pose_difference GROUP BY experience_id ORDER BY experience_id
     template_type: system
     template: bar
+  AMCL Uncertainty Analysis:
+    type: test
+    description: Comparison of AMCL predicted uncertainty against actual localization errors over time.
+    query_string: |
+      SELECT 'Predicted Uncertainty (m)' as group_name, timestamp / 1E9 AS "Time (s)", position_uncertainty_m as "Distance (m)"
+      FROM localization_uncertainty
+      UNION ALL
+      SELECT 'Actual Error (m)' as group_name, timestamp / 1E9 AS "Time (s)", position_error_m as "Distance (m)"
+      FROM covariance_accuracy
+      UNION ALL
+      SELECT 'Mahalanobis Distance' as group_name, timestamp / 1E9 AS "Time (s)", mahalanobis_distance as "Distance (m)"
+      FROM covariance_accuracy
+    template_type: system
+    template: line
+  Covariance Accuracy Assessment:
+    type: test
+    description: Statistical assessment of how well covariance predictions match reality. Well-calibrated systems show ~68% within 1σ, ~95% within 2σ.
+    query_string: |
+      SELECT 'Within 1σ (%)' as group_name, timestamp / 1E9 AS "Time (s)", 100.0 * CASE WHEN within_1_sigma THEN 1.0 ELSE 0.0 END as "Percentage (%)"
+      FROM covariance_accuracy
+      UNION ALL
+      SELECT 'Within 2σ (%)' as group_name, timestamp / 1E9 AS "Time (s)", 100.0 * CASE WHEN within_2_sigma THEN 1.0 ELSE 0.0 END as "Percentage (%)"
+      FROM covariance_accuracy
+      UNION ALL
+      SELECT 'Within 3σ (%)' as group_name, timestamp / 1E9 AS "Time (s)", 100.0 * CASE WHEN within_3_sigma THEN 1.0 ELSE 0.0 END as "Percentage (%)"
+      FROM covariance_accuracy
+    template_type: system
+    template: line
+  Confidence Interval Analysis:
+    type: test
+    description: Innovation quality assessment - well-calibrated systems should show values around 2.0.
+    query_string: |
+      SELECT 'Innovation Quality (target: ~2.0)' as group_name, timestamp / 1E9 AS "Time (s)", normalized_innovation_squared as "Innovation Quality"
+      FROM covariance_accuracy
+    template_type: system
+    template: line
+  Covariance Calibration Quality:
+    type: batch
+    description: Statistical assessment of covariance matrix calibration across all experiences.
+    query_string: |
+      SELECT 'Within 1σ (%)' as group_name, experience_id as "Experience ID", 100.0 * AVG(CASE WHEN within_1_sigma THEN 1.0 ELSE 0.0 END) as "Percentage (%)"
+      FROM covariance_accuracy 
+      GROUP BY experience_id 
+      UNION ALL
+      SELECT 'Within 2σ (%)' as group_name, experience_id as "Experience ID", 100.0 * AVG(CASE WHEN within_2_sigma THEN 1.0 ELSE 0.0 END) as "Percentage (%)"
+      FROM covariance_accuracy 
+      GROUP BY experience_id 
+      UNION ALL
+      SELECT 'Within 3σ (%)' as group_name, experience_id as "Experience ID", 100.0 * AVG(CASE WHEN within_3_sigma THEN 1.0 ELSE 0.0 END) as "Percentage (%)"
+      FROM covariance_accuracy 
+      GROUP BY experience_id 
+      ORDER BY "Experience ID"
+    template_type: system
+    template: bar
 
 metrics sets:
   Nav2 Metrics:
@@ -103,8 +177,12 @@ metrics sets:
       - Distance to Goal
       - Robot Trajectory
       - Localization Error
+      - AMCL Uncertainty Analysis
+      - Covariance Accuracy Assessment
+      - Confidence Interval Analysis
       - Time to reach final goal
       # Batch metrics
       - Goal Dwelling Time
       - Total time to reach final Goal
       - Maximum Localization Error
+      - Covariance Calibration Quality
