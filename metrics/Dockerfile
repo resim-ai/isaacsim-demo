@@ -15,6 +15,7 @@ COPY metrics/requirements.txt .
 RUN pip install -r requirements.txt
 
 COPY metrics /app
+COPY .resim/metrics/config.yml /app/resim_metrics_config.yml
 RUN chmod +x entrypoint.sh
 
 ENTRYPOINT ["./entrypoint.sh"]

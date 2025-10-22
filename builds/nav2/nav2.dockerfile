@@ -48,5 +48,6 @@ RUN source /opt/ros/humble/setup.bash && colcon build
 
 COPY builds/nav2/goals /goals
 COPY builds/nav2/entrypoint.sh /
+COPY /.resim/metrics/config.yml ./resim_metrics_config.yml
 
 ENTRYPOINT ["/entrypoint.sh"]

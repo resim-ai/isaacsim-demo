@@ -277,10 +277,6 @@ jobs:
         run: |
           ./resim-cli projects select $PROJECT_NAME
 
-      - name: Sync metrics config
-        run: |
-          ./resim-cli metrics sync
-
       - name: Register Isaac Sim Build in ReSim
         id: register_build
         run: |
@@ -294,4 +290,4 @@ jobs:
         run: |
           echo "Running the Isaac Sim test suite..."
           ./resim-cli suites run --test-suite "$SIM_TEST_SUITE" --build-id "${{ steps.register_build.outputs.build_id }}" \
-            --pool-labels 'resim:metrics2:k8s' --github >> $GITHUB_OUTPUT
+            --pool-labels 'resim:metrics2:k8s' --github --sync-metrics-config true >> $GITHUB_OUTPUT

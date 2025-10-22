@@ -7,7 +7,7 @@ from rclpy.node import Node
 from rclpy.time import Time
 from builtin_interfaces.msg import Time as MsgTime
 from custom_message.msg import GoalStatus
-from resim.metrics.python.emissions import emit
+from resim.metrics.python.emissions import Emitter
 from tf2_ros import Buffer, TransformListener, Duration
 import tf2_geometry_msgs
 import os
@@ -19,8 +19,7 @@ class MetricsEmitter(Node):
         super().__init__('metrics_emitter')
         self.get_logger().info('Metrics emitter node initialized')
 
-        os.makedirs("/tmp/resim/outputs/ignore", exist_ok=True)
-        self.emissions_handle = Path('/tmp/resim/outputs/ignore/emissions.ndjson').open('a')
+        self.emitter = Emitter(config_path=Path("/humble_ws/resim_metrics_config.yml"))
 
         # build transform buffer
         self.tf_buffer = Buffer()
@@ -52,9 +51,6 @@ class MetricsEmitter(Node):
         # Rate limiting for odometry processing (10Hz = 0.1 seconds)
         self.odom_processing_rate = 0.1  # seconds between processing
         self.last_odom_processed_time: Optional[Time] = None
-
-    def __del__(self):
-        self.emissions_handle.close()
 
     def get_relative_timestamp(self, msg_time: Optional[MsgTime] = None) -> Optional[int]:
         """
@@ -150,12 +146,12 @@ class MetricsEmitter(Node):
             return
         
         # Emit goal reached event for any goal completion
-        emit('goal_reached', {
+        self.emitter.emit_event('goal_reached', {
             'name': f'Goal {self.completed_goals} Reached',
             'description': f'Robot successfully reached goal number {self.completed_goals}',
             'status': 'PASSED',
             'tags': ['navigation']
-        }, event=True, timestamp=relative_timestamp, file=self.emissions_handle)
+        }, timestamp=relative_timestamp)
 
         if self.prev_goal_received_time is not None and self.first_goal_received_time is not None:
             time_to_goal_seconds = (relative_timestamp - (self.prev_goal_received_time.nanoseconds - self.first_goal_received_time.nanoseconds)) / 1e9
@@ -163,10 +159,10 @@ class MetricsEmitter(Node):
             self.get_logger().warn("Cannot calculate time to goal: missing timestamp data")
             return
 
-        emit('time_to_goal', {
+        self.emitter.emit('time_to_goal', {
             'time_s': time_to_goal_seconds,
             'goal_name': f'Goal {self.completed_goals}'
-        }, timestamp=relative_timestamp, file=self.emissions_handle)
+        }, timestamp=relative_timestamp)
         
         self.get_logger().info(f"Goal {self.completed_goals} completed with status: {msg.status}")
         
@@ -209,7 +205,7 @@ class MetricsEmitter(Node):
                 return
             
             # Emit the distance metric
-            emit('goal_distance_1', {'distance_m': distance, 'goal_name': f'Goal {self.goal_count}'}, timestamp=relative_timestamp, file=self.emissions_handle)
+            self.emitter.emit('goal_distance_1', {'distance_m': distance, 'goal_name': f'Goal {self.goal_count}'}, timestamp=relative_timestamp)
             
             # Update the last processed time for rate limiting
             self.last_odom_processed_time = current_time
@@ -315,21 +311,21 @@ class MetricsEmitter(Node):
                 return
             
             # Emit the original pose difference metric
-            emit('pose_difference', {
+            self.emitter.emit('pose_difference', {
                 'position_diff_m': pos_diff
-            }, timestamp=relative_timestamp, file=self.emissions_handle)
+            }, timestamp=relative_timestamp)
             
             # Emit comprehensive covariance analysis metrics
-            emit('localization_uncertainty', {
+            self.emitter.emit('localization_uncertainty', {
                 'position_uncertainty_m': pos_uncertainty,
                 'yaw_uncertainty_rad': yaw_uncertainty,
                 'cov_x': cov_x,
                 'cov_y': cov_y,
                 'cov_yaw': cov_yaw,
                 'cov_xy': cov_xy
-            }, timestamp=relative_timestamp, file=self.emissions_handle)
+            }, timestamp=relative_timestamp)
             
-            emit('covariance_accuracy', {
+            self.emitter.emit('covariance_accuracy', {
                 'position_error_m': pos_diff,
                 'yaw_error_rad': abs(dyaw),
                 'normalized_x': normalized_x,
@@ -340,7 +336,7 @@ class MetricsEmitter(Node):
                 'within_1_sigma': int(within_1_sigma),
                 'within_2_sigma': int(within_2_sigma),
                 'within_3_sigma': int(within_3_sigma)
-            }, timestamp=relative_timestamp, file=self.emissions_handle)
+            }, timestamp=relative_timestamp)
             
             self.get_logger().debug(f"Pose diff: {pos_diff:.3f}m, Pos uncertainty: {pos_uncertainty:.3f}m, "
                                   f"Normalized residuals: x={normalized_x:.2f}, y={normalized_y:.2f}, "

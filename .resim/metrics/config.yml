@@ -45,6 +45,11 @@ topics:
   robot_trajectory:
     schema:
       raw_metric: string
+  odom_linear_velocity:
+    schema:
+      x: float
+      y: float
+      z: float
 
 metrics:
   Stereo Camera Feed:
@@ -105,7 +110,7 @@ metrics:
         WHERE distance_m <= 0.5
       ) dwelling_periods
       GROUP BY experience_id, goal_name
-      ORDER BY experience_id, goal_name
+      ORDER BY experience_id, goal_name;
     template_type: system
     template: bar
   Maximum Localization Error:
@@ -125,7 +130,7 @@ metrics:
       FROM covariance_accuracy
       UNION ALL
       SELECT 'Mahalanobis Distance' as group_name, timestamp / 1E9 AS "Time (s)", mahalanobis_distance as "Distance (m)"
-      FROM covariance_accuracy
+      FROM covariance_accuracy;
     template_type: system
     template: line
   Covariance Accuracy Assessment:
@@ -139,7 +144,7 @@ metrics:
       FROM covariance_accuracy
       UNION ALL
       SELECT 'Within 3σ (%)' as group_name, timestamp / 1E9 AS "Time (s)", 100.0 * CASE WHEN within_3_sigma THEN 1.0 ELSE 0.0 END as "Percentage (%)"
-      FROM covariance_accuracy
+      FROM covariance_accuracy;
     template_type: system
     template: line
   Confidence Interval Analysis:
@@ -147,7 +152,7 @@ metrics:
     description: Innovation quality assessment - well-calibrated systems should show values around 2.0.
     query_string: |
       SELECT 'Innovation Quality (target: ~2.0)' as group_name, timestamp / 1E9 AS "Time (s)", normalized_innovation_squared as "Innovation Quality"
-      FROM covariance_accuracy
+      FROM covariance_accuracy;
     template_type: system
     template: line
   Covariance Calibration Quality:
@@ -165,7 +170,7 @@ metrics:
       SELECT 'Within 3σ (%)' as group_name, experience_id as "Experience ID", 100.0 * AVG(CASE WHEN within_3_sigma THEN 1.0 ELSE 0.0 END) as "Percentage (%)"
       FROM covariance_accuracy 
       GROUP BY experience_id 
-      ORDER BY "Experience ID"
+      ORDER BY "Experience ID";
     template_type: system
     template: bar
 
