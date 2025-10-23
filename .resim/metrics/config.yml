@@ -133,46 +133,75 @@ metrics:
       FROM covariance_accuracy;
     template_type: system
     template: line
-  Covariance Accuracy Assessment:
+  AMCL Covariance Calibration:
     type: test
-    description: Statistical assessment of how well covariance predictions match reality. Well-calibrated systems show ~68% within 1σ, ~95% within 2σ.
+    description: Evaluates whether AMCL's uncertainty estimates are realistic. NIS measures if predicted covariance matches actual errors. Low NIS (<2.0) indicates overconfidence; high NIS (>2.0) indicates underconfidence.
     query_string: |
-      SELECT 'Within 1σ (%)' as group_name, timestamp / 1E9 AS "Time (s)", 100.0 * CASE WHEN within_1_sigma THEN 1.0 ELSE 0.0 END as "Percentage (%)"
-      FROM covariance_accuracy
-      UNION ALL
-      SELECT 'Within 2σ (%)' as group_name, timestamp / 1E9 AS "Time (s)", 100.0 * CASE WHEN within_2_sigma THEN 1.0 ELSE 0.0 END as "Percentage (%)"
-      FROM covariance_accuracy
-      UNION ALL
-      SELECT 'Within 3σ (%)' as group_name, timestamp / 1E9 AS "Time (s)", 100.0 * CASE WHEN within_3_sigma THEN 1.0 ELSE 0.0 END as "Percentage (%)"
+      SELECT "Metric", "Value" FROM (
+        SELECT 1 as sort_order, 'Total Samples' as "Metric", CAST(COUNT(*) AS VARCHAR) as "Value"
+        FROM covariance_accuracy
+        UNION ALL
+        SELECT 2 as sort_order, 'Within 1σ (target: ~68%)' as "Metric", CONCAT(CAST(ROUND(100.0 * AVG(CASE WHEN within_1_sigma = 1 THEN 1.0 ELSE 0.0 END), 1) AS VARCHAR), '%') as "Value"
+        FROM covariance_accuracy
+        UNION ALL
+        SELECT 3 as sort_order, 'Within 2σ (target: ~95%)' as "Metric", CONCAT(CAST(ROUND(100.0 * AVG(CASE WHEN within_2_sigma = 1 THEN 1.0 ELSE 0.0 END), 1) AS VARCHAR), '%') as "Value"
+        FROM covariance_accuracy
+        UNION ALL
+        SELECT 4 as sort_order, 'Within 3σ (target: ~99.7%)' as "Metric", CONCAT(CAST(ROUND(100.0 * AVG(CASE WHEN within_3_sigma = 1 THEN 1.0 ELSE 0.0 END), 1) AS VARCHAR), '%') as "Value"
+        FROM covariance_accuracy
+        UNION ALL
+        SELECT 5 as sort_order, 'NIS Median (target: ~2.0)' as "Metric", CAST(ROUND(APPROX_PERCENTILE(normalized_innovation_squared, 0.5), 2) AS VARCHAR) as "Value"
+        FROM covariance_accuracy
+        ORDER BY sort_order
+      );
+    template_type: system
+    template: table
+  NIS Over Time:
+    type: test
+    description: Normalized Innovation Squared plotted over time. Shows how AMCL's covariance calibration varies during the run. Values near 2.0 indicate good calibration; consistently low values show overconfidence.
+    query_string: |
+      SELECT 
+        'NIS (target: ~2.0)' AS group_name, 
+        timestamp / 1E9 AS "Time (s)", 
+        normalized_innovation_squared AS "NIS Value"
       FROM covariance_accuracy;
     template_type: system
     template: line
-  Confidence Interval Analysis:
-    type: test
-    description: Innovation quality assessment - well-calibrated systems should show values around 2.0.
-    query_string: |
-      SELECT 'Innovation Quality (target: ~2.0)' as group_name, timestamp / 1E9 AS "Time (s)", normalized_innovation_squared as "Innovation Quality"
-      FROM covariance_accuracy;
-    template_type: system
-    template: line
-  Covariance Calibration Quality:
+  AMCL Covariance Calibration Summary:
     type: batch
     description: Statistical assessment of covariance matrix calibration across all experiences.
     query_string: |
-      SELECT 'Within 1σ (%)' as group_name, experience_id as "Experience ID", 100.0 * AVG(CASE WHEN within_1_sigma THEN 1.0 ELSE 0.0 END) as "Percentage (%)"
-      FROM covariance_accuracy 
-      GROUP BY experience_id 
-      UNION ALL
-      SELECT 'Within 2σ (%)' as group_name, experience_id as "Experience ID", 100.0 * AVG(CASE WHEN within_2_sigma THEN 1.0 ELSE 0.0 END) as "Percentage (%)"
-      FROM covariance_accuracy 
-      GROUP BY experience_id 
-      UNION ALL
-      SELECT 'Within 3σ (%)' as group_name, experience_id as "Experience ID", 100.0 * AVG(CASE WHEN within_3_sigma THEN 1.0 ELSE 0.0 END) as "Percentage (%)"
-      FROM covariance_accuracy 
-      GROUP BY experience_id 
-      ORDER BY "Experience ID";
+      SELECT "Metric", "Value" FROM (
+        SELECT 1 as sort_order, 'Total Samples' as "Metric", CAST(COUNT(*) AS VARCHAR) as "Value"
+        FROM covariance_accuracy
+        UNION ALL
+        SELECT 2 as sort_order, 'Within 1σ (target: ~68%)' as "Metric", CONCAT(CAST(ROUND(100.0 * AVG(CASE WHEN within_1_sigma = 1 THEN 1.0 ELSE 0.0 END), 1) AS VARCHAR), '%') as "Value"
+        FROM covariance_accuracy
+        UNION ALL
+        SELECT 3 as sort_order, 'Within 2σ (target: ~95%)' as "Metric", CONCAT(CAST(ROUND(100.0 * AVG(CASE WHEN within_2_sigma = 1 THEN 1.0 ELSE 0.0 END), 1) AS VARCHAR), '%') as "Value"
+        FROM covariance_accuracy
+        UNION ALL
+        SELECT 4 as sort_order, 'Within 3σ (target: ~99.7%)' as "Metric", CONCAT(CAST(ROUND(100.0 * AVG(CASE WHEN within_3_sigma = 1 THEN 1.0 ELSE 0.0 END), 1) AS VARCHAR), '%') as "Value"
+        FROM covariance_accuracy
+        UNION ALL
+        SELECT 5 as sort_order, 'NIS Median (target: ~2.0)' as "Metric", CAST(ROUND(APPROX_PERCENTILE(normalized_innovation_squared, 0.5), 2) AS VARCHAR) as "Value"
+        FROM covariance_accuracy
+        ORDER BY sort_order
+      );
     template_type: system
-    template: bar
+    template: table
+  Robot Speed:
+    type: test
+    description: Robot speed over time
+    query_string: |
+      SELECT 
+        "Speed", 
+        timestamp / 1E9 AS "Time (s)", 
+        SQRT(POWER(x, 2) + POWER(y, 2)) AS "Speed (m/s)" 
+      FROM odom_linear_velocity;
+    template_type: system
+    template: line
+
 
 metrics sets:
   Nav2 Metrics:
@@ -183,11 +212,12 @@ metrics sets:
       - Robot Trajectory
       - Localization Error
       - AMCL Uncertainty Analysis
-      - Covariance Accuracy Assessment
-      - Confidence Interval Analysis
+      - AMCL Covariance Calibration
+      - NIS Over Time
       - Time to reach final goal
+      - Robot Speed
       # Batch metrics
       - Goal Dwelling Time
       - Total time to reach final Goal
       - Maximum Localization Error
-      - Covariance Calibration Quality
+      - AMCL Covariance Calibration Summary
