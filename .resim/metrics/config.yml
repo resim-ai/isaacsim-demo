@@ -79,46 +79,18 @@ metrics:
   Time to reach final goal:
     type: test
     description: Time between receiving first goal and reaching final goal.
-    query_string: SELECT sum(time_s) FROM time_to_goal
-    template_type: system
-    template: scalar
-  # Batch metrics
-  Total time to reach final Goal:
-    type: batch
-    description: Sum of all 'Time to reach final goal' metrics across all experiences.
-    query_string: SELECT sum(time_s) FROM time_to_goal
-    template_type: system
-    template: scalar
-  Goal Dwelling Time:
-    type: batch
-    description: Time spent within 0.5m of each goal for each job
     query_string: |
       SELECT 
-        goal_name as "Goal Name",
-        experience_id as "Experience ID",
-        SUM(time_diff) as "Dwelling Time (s)"
-      FROM (
-        SELECT 
-          experience_id,
-          goal_name,
-          CASE 
-            WHEN distance_m <= 0.5 AND LAG(timestamp / 1E9) OVER (PARTITION BY experience_id, goal_name ORDER BY timestamp) IS NOT NULL
-            THEN (timestamp / 1E9) - LAG(timestamp / 1E9) OVER (PARTITION BY experience_id, goal_name ORDER BY timestamp)
-            ELSE 0 
-          END as time_diff
-        FROM goal_distance_1
-        WHERE distance_m <= 0.5
-      ) dwelling_periods
-      GROUP BY experience_id, goal_name
-      ORDER BY experience_id, goal_name;
+        CASE 
+          WHEN (SELECT COUNT(*) FROM time_to_goal) != 3 THEN 420
+          ELSE sum(time_s)
+        END
+      FROM time_to_goal
     template_type: system
-    template: bar
-  Maximum Localization Error:
-    type: batch
-    description: Maximum position difference between odometry and AMCL localization across all experiences.
-    query_string: SELECT 'Maximum', experience_id as "Experience ID", MAX(position_diff_m) as "Maximum Localization Error (m)" FROM pose_difference GROUP BY experience_id ORDER BY experience_id
-    template_type: system
-    template: bar
+    template: scalar
+    status:
+      query_string: SELECT '1' FROM time_to_goal HAVING COUNT(*) < ?
+      block: 3
   AMCL Uncertainty Analysis:
     type: test
     description: Comparison of AMCL predicted uncertainty against actual localization errors over time.
@@ -167,6 +139,54 @@ metrics:
       FROM covariance_accuracy;
     template_type: system
     template: line
+  Robot Speed:
+    type: test
+    description: Robot speed over time
+    query_string: |
+      SELECT 
+        'Speed', 
+        timestamp / 1E9 AS "Time (s)", 
+        SQRT(POWER(x, 2) + POWER(y, 2)) AS "Speed (m/s)" 
+      FROM odom_linear_velocity;
+    template_type: system
+    template: line
+  # Batch metrics
+  Total time to reach final Goal:
+    type: batch
+    description: Sum of all 'Time to reach final goal' metrics across all experiences.
+    query_string: SELECT sum(time_s) FROM time_to_goal
+    template_type: system
+    template: scalar
+  Goal Dwelling Time:
+    type: batch
+    description: Time spent within 0.5m of each goal for each job
+    query_string: |
+      SELECT 
+        goal_name as "Goal Name",
+        experience_id as "Experience ID",
+        SUM(time_diff) as "Dwelling Time (s)"
+      FROM (
+        SELECT 
+          experience_id,
+          goal_name,
+          CASE 
+            WHEN distance_m <= 0.5 AND LAG(timestamp / 1E9) OVER (PARTITION BY experience_id, goal_name ORDER BY timestamp) IS NOT NULL
+            THEN (timestamp / 1E9) - LAG(timestamp / 1E9) OVER (PARTITION BY experience_id, goal_name ORDER BY timestamp)
+            ELSE 0 
+          END as time_diff
+        FROM goal_distance_1
+        WHERE distance_m <= 0.5
+      ) dwelling_periods
+      GROUP BY experience_id, goal_name
+      ORDER BY experience_id, goal_name;
+    template_type: system
+    template: bar
+  Maximum Localization Error:
+    type: batch
+    description: Maximum position difference between odometry and AMCL localization across all experiences.
+    query_string: SELECT 'Maximum', experience_id as "Experience ID", MAX(position_diff_m) as "Maximum Localization Error (m)" FROM pose_difference GROUP BY experience_id ORDER BY experience_id
+    template_type: system
+    template: bar
   AMCL Covariance Calibration Summary:
     type: batch
     description: Statistical assessment of covariance matrix calibration across all experiences.
@@ -190,17 +210,6 @@ metrics:
       );
     template_type: system
     template: table
-  Robot Speed:
-    type: test
-    description: Robot speed over time
-    query_string: |
-      SELECT 
-        "Speed", 
-        timestamp / 1E9 AS "Time (s)", 
-        SQRT(POWER(x, 2) + POWER(y, 2)) AS "Speed (m/s)" 
-      FROM odom_linear_velocity;
-    template_type: system
-    template: line
 
 
 metrics sets:
@@ -210,12 +219,12 @@ metrics sets:
       - Stereo Camera Feed
       - Distance to Goal
       - Robot Trajectory
+      - Robot Speed
       - Localization Error
       - AMCL Uncertainty Analysis
       - AMCL Covariance Calibration
       - NIS Over Time
       - Time to reach final goal
-      - Robot Speed
       # Batch metrics
       - Goal Dwelling Time
       - Total time to reach final Goal
