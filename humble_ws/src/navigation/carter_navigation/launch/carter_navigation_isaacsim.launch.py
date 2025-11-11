@@ -193,5 +193,8 @@ def generate_launch_description():
             on_exit=nav2_stack,
         )
     )
-    return LaunchDescription([checklist_node, nav2_stack_handler])
+    return LaunchDescription([
+        checklist_node,
+        nav2_stack_handler
+    ])
 

@@ -7,6 +7,8 @@ services:
     image: resim-isaacsim
     volumes:
       - shadercache:/shadercache
+    environment:
+      - OMNI_KIT_ALLOW_ROOT=1
   nav2:
     extends:
       file: docker-compose.yml

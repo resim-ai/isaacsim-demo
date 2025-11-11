@@ -22,6 +22,7 @@ import asyncio
 import omni.client
 import omni.kit.async_engine
 import omni.timeline
+import time
 
 def main():
     parser = argparse.ArgumentParser()
@@ -41,6 +42,48 @@ def main():
     print("opening stage")
 
     omni.kit.async_engine.run_coroutine(open_stage_async(options.path, options.start_on_play))
+
+async def monitor_sim_time_rate():
+    """Monitor and print the rate between realtime and sim time every 5 seconds."""
+    timeline_interface = omni.timeline.get_timeline_interface()
+    
+    # Store initial values
+    initial_sim_time: float = None
+    initial_real_time: float = None
+
+    last_sim_time: float = 0.0
+    sim_time_offset = 0.0
+
+    print("Monitoring sim time rate...")
+    
+    while True:
+        await omni.kit.app.get_app().next_update_async()
+        # Get current sim time and real time
+        current_sim_time: float = timeline_interface.get_current_time()
+        current_real_time: float = time.time()
+        
+        # Initialize on first iteration
+        if initial_sim_time is None:
+            initial_sim_time = current_sim_time
+            initial_real_time = current_real_time
+            continue
+        
+        if current_sim_time < last_sim_time:
+            sim_time_offset = last_sim_time - current_sim_time
+            print(f"Sim time is going backwards. Setting sim time offset to {sim_time_offset} seconds.")
+        
+        # Calculate deltas
+        sim_time_delta = (current_sim_time + sim_time_offset) - initial_sim_time
+        real_time_delta = current_real_time - initial_real_time
+        
+        # Calculate and print the average rate
+        if real_time_delta > 0:
+            rate = sim_time_delta / real_time_delta
+            print(f"Sim time rate: {rate:.4f}x, sim time: {(current_sim_time + sim_time_offset):.2f}s")
+        
+        last_sim_time = current_sim_time
+        await asyncio.sleep(1.0)
+
 
 async def open_stage_async(path: str, start_on_play: bool):
     timeline_interface = None
@@ -68,14 +111,14 @@ async def open_stage_async(path: str, start_on_play: bool):
         else:
             if timeline_interface is not None:
                 await omni.kit.app.get_app().next_update_async()
-                await omni.kit.app.get_app().next_update_async()
                 timeline_interface.play()
+                await omni.kit.app.get_app().next_update_async()
                 print("Stage loaded and simulation is playing.")
             pass
     result, _ = await omni.client.stat_async(path)
     if result == omni.client.Result.OK:
         await _open_stage_internal(path)
-
+        omni.kit.async_engine.run_coroutine(monitor_sim_time_rate())
         return
 
     broken_url = omni.client.break_url(path)
