@@ -1,4 +1,4 @@
-FROM public.ecr.aws/resim/isaac-sim-resim-shaders:5.0.0
+FROM nvcr.io/nvidia/isaac-sim:5.1.0
 
 # Setup entrypoint and deps
 COPY builds/isaacsim/entrypoint.sh /

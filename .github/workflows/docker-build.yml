@@ -21,264 +21,264 @@ permissions:
   pull-requests: write
 
 jobs:
-  create-new-isaac-sim-mcb-build:
-    name: Create New Isaac Sim MCB Build
-    runs-on: ubuntu-latest
-    outputs:
-      image_tag: ${{ steps.get_image_tag.outputs.image_tag }}
-    steps:
-      - name: Disk Cleanup
-        run: |
-          cd /opt
-          find . -maxdepth 1 -mindepth 1 '!' -path ./containerd '!' -path ./actionarchivecache '!' -path ./runner '!' -path ./runner-cache -exec rm -rf '{}' ';'
-          rm -rf /opt/hostedtoolcache
+  # create-new-isaac-sim-mcb-build:
+  #   name: Create New Isaac Sim MCB Build
+  #   runs-on: ubuntu-latest
+  #   outputs:
+  #     image_tag: ${{ steps.get_image_tag.outputs.image_tag }}
+  #   steps:
+  #     - name: Disk Cleanup
+  #       run: |
+  #         cd /opt
+  #         find . -maxdepth 1 -mindepth 1 '!' -path ./containerd '!' -path ./actionarchivecache '!' -path ./runner '!' -path ./runner-cache -exec rm -rf '{}' ';'
+  #         rm -rf /opt/hostedtoolcache
 
-      - name: Checkout
-        uses: actions/checkout@v4
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.ECR_RW_ROLE }}
-          aws-region: us-east-1
+  #     - name: Configure AWS Credentials
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         role-to-assume: ${{ secrets.ECR_RW_ROLE }}
+  #         aws-region: us-east-1
 
-      - name: Log in to ECR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY_NAME }}
+  #     - name: Log in to ECR
+  #       uses: docker/login-action@v3
+  #       with:
+  #         registry: ${{ env.REGISTRY_NAME }}
 
-      - name: Docker metadata
-        id: docker_meta
-        uses: docker/metadata-action@v5
-        with:
-          images: |
-            ${{ env.REGISTRY_NAME }}/${{ env.BUILD_REPO_NAME }}
-          tags: |
-            type=ref,event=branch,prefix=isaacsim-mcb-isaacsim-
-            type=ref,event=pr,prefix=isaacsim-mcb-isaacsim-pr-
-            type=sha,prefix=isaacsim-mcb-isaacsim-
+  #     - name: Docker metadata
+  #       id: docker_meta
+  #       uses: docker/metadata-action@v5
+  #       with:
+  #         images: |
+  #           ${{ env.REGISTRY_NAME }}/${{ env.BUILD_REPO_NAME }}
+  #         tags: |
+  #           type=ref,event=branch,prefix=isaacsim-mcb-isaacsim-
+  #           type=ref,event=pr,prefix=isaacsim-mcb-isaacsim-pr-
+  #           type=sha,prefix=isaacsim-mcb-isaacsim-
 
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          base: ${{ github.ref }}
-          filters: |
-            isaac:
-              - builds/isaacsim/**
-              - humble_ws/src/isaacsim/scripts/open_isaacsim_stage.py
+  #     - uses: dorny/paths-filter@v3
+  #       id: filter
+  #       with:
+  #         base: ${{ github.ref }}
+  #         filters: |
+  #           isaac:
+  #             - builds/isaacsim/**
+  #             - humble_ws/src/isaacsim/scripts/open_isaacsim_stage.py
       
-      - name: Set up Docker Buildx
-        if: ${{ github.event_name != 'pull_request' || steps.filter.outputs.isaac == 'true'}}
-        uses: docker/setup-buildx-action@v3
+  #     - name: Set up Docker Buildx
+  #       if: ${{ github.event_name != 'pull_request' || steps.filter.outputs.isaac == 'true'}}
+  #       uses: docker/setup-buildx-action@v3
 
-      - name: Docker Build Push
-        if: ${{ github.event_name != 'pull_request' || steps.filter.outputs.isaac == 'true'}}
-        id: build-push-build
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./builds/isaacsim/isaacsim.dockerfile
-          push: true
-          tags: ${{ steps.docker_meta.outputs.tags }}
-          cache-from: type=registry,ref=909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-isaacsim-5-0-0-docker-cache
-          cache-to: type=registry,ref=909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-isaacsim-5-0-0-docker-cache,mode=max
+  #     - name: Docker Build Push
+  #       if: ${{ github.event_name != 'pull_request' || steps.filter.outputs.isaac == 'true'}}
+  #       id: build-push-build
+  #       uses: docker/build-push-action@v5
+  #       with:
+  #         context: .
+  #         file: ./builds/isaacsim/isaacsim.dockerfile
+  #         push: true
+  #         tags: ${{ steps.docker_meta.outputs.tags }}
+  #         cache-from: type=registry,ref=909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-isaacsim-5-0-0-docker-cache
+  #         cache-to: type=registry,ref=909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-isaacsim-5-0-0-docker-cache,mode=max
       
-      - uses: imjasonh/setup-crane@v0.4
+  #     - uses: imjasonh/setup-crane@v0.4
 
-      - name: Retag existing image
-        if: ${{ github.event_name == 'pull_request' && steps.filter.outputs.isaac == 'false'}}
-        id: retag_image
-        run: |
-          export IMAGE_URL=$(echo "${{ steps.docker_meta.outputs.tags }}" | tail -n 1)
-          export IMAGE_TAG="${IMAGE_URL##*:}"
-          crane tag ${{ env.REGISTRY_NAME }}/${{ env.BUILD_REPO_NAME }}:isaacsim-mcb-isaacsim-${{ github.event.pull_request.base.ref }} $IMAGE_TAG
+  #     - name: Retag existing image
+  #       if: ${{ github.event_name == 'pull_request' && steps.filter.outputs.isaac == 'false'}}
+  #       id: retag_image
+  #       run: |
+  #         export IMAGE_URL=$(echo "${{ steps.docker_meta.outputs.tags }}" | tail -n 1)
+  #         export IMAGE_TAG="${IMAGE_URL##*:}"
+  #         crane tag ${{ env.REGISTRY_NAME }}/${{ env.BUILD_REPO_NAME }}:isaacsim-mcb-isaacsim-${{ github.event.pull_request.base.ref }} $IMAGE_TAG
 
-      - name: Get Image Tag
-        id: get_image_tag
-        run: |
-          export IMAGE_URL=$(echo "${{ steps.docker_meta.outputs.tags }}" | tail -n 1)
-          echo "image_tag=$IMAGE_URL" >> $GITHUB_OUTPUT
+  #     - name: Get Image Tag
+  #       id: get_image_tag
+  #       run: |
+  #         export IMAGE_URL=$(echo "${{ steps.docker_meta.outputs.tags }}" | tail -n 1)
+  #         echo "image_tag=$IMAGE_URL" >> $GITHUB_OUTPUT
 
-  create-new-nav2-mcb-build:
-    name: Create New Nav2 MCB Build
-    runs-on: ubuntu-latest
-    outputs:
-      image_tag: ${{ steps.get_image_tag.outputs.image_tag }}
-    steps:
-      - name: Disk Cleanup
-        run: |
-          cd /opt
-          find . -maxdepth 1 -mindepth 1 '!' -path ./containerd '!' -path ./actionarchivecache '!' -path ./runner '!' -path ./runner-cache -exec rm -rf '{}' ';'
-          rm -rf /opt/hostedtoolcache
+  # create-new-nav2-mcb-build:
+  #   name: Create New Nav2 MCB Build
+  #   runs-on: ubuntu-latest
+  #   outputs:
+  #     image_tag: ${{ steps.get_image_tag.outputs.image_tag }}
+  #   steps:
+  #     - name: Disk Cleanup
+  #       run: |
+  #         cd /opt
+  #         find . -maxdepth 1 -mindepth 1 '!' -path ./containerd '!' -path ./actionarchivecache '!' -path ./runner '!' -path ./runner-cache -exec rm -rf '{}' ';'
+  #         rm -rf /opt/hostedtoolcache
 
-      - name: Checkout
-        uses: actions/checkout@v4
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.ECR_RW_ROLE }}
-          aws-region: us-east-1
+  #     - name: Configure AWS Credentials
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         role-to-assume: ${{ secrets.ECR_RW_ROLE }}
+  #         aws-region: us-east-1
 
-      - name: Log in to ECR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY_NAME }}
+  #     - name: Log in to ECR
+  #       uses: docker/login-action@v3
+  #       with:
+  #         registry: ${{ env.REGISTRY_NAME }}
       
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v3
 
-      - name: Docker metadata
-        id: docker_meta
-        uses: docker/metadata-action@v5
-        with:
-          images: |
-            ${{ env.REGISTRY_NAME }}/${{ env.BUILD_REPO_NAME }}
-          tags: |
-            type=ref,event=branch,prefix=isaacsim-mcb-nav2-
-            type=ref,event=pr,prefix=isaacsim-mcb-nav2-pr-
-            type=sha,prefix=isaacsim-mcb-nav2-
+  #     - name: Docker metadata
+  #       id: docker_meta
+  #       uses: docker/metadata-action@v5
+  #       with:
+  #         images: |
+  #           ${{ env.REGISTRY_NAME }}/${{ env.BUILD_REPO_NAME }}
+  #         tags: |
+  #           type=ref,event=branch,prefix=isaacsim-mcb-nav2-
+  #           type=ref,event=pr,prefix=isaacsim-mcb-nav2-pr-
+  #           type=sha,prefix=isaacsim-mcb-nav2-
 
-      - name: Docker Build Push
-        id: build-push-build
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./builds/nav2/nav2.dockerfile
-          push: true
-          tags: ${{ steps.docker_meta.outputs.tags }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+  #     - name: Docker Build Push
+  #       id: build-push-build
+  #       uses: docker/build-push-action@v5
+  #       with:
+  #         context: .
+  #         file: ./builds/nav2/nav2.dockerfile
+  #         push: true
+  #         tags: ${{ steps.docker_meta.outputs.tags }}
+  #         cache-from: type=gha
+  #         cache-to: type=gha,mode=max
 
-      - name: Get Image Tag
-        id: get_image_tag
-        run: |
-          export IMAGE_TAG=$(echo "${{ steps.docker_meta.outputs.tags }}" | tail -n 1)
-          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+  #     - name: Get Image Tag
+  #       id: get_image_tag
+  #       run: |
+  #         export IMAGE_TAG=$(echo "${{ steps.docker_meta.outputs.tags }}" | tail -n 1)
+  #         echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-  create-new-isaac-sim-metrics-build:
-    name: Create New Isaac Sim Metrics Build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+  # create-new-isaac-sim-metrics-build:
+  #   name: Create New Isaac Sim Metrics Build
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
   
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.ECR_RW_ROLE }}
-          aws-region: us-east-1
+  #     - name: Configure AWS Credentials
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         role-to-assume: ${{ secrets.ECR_RW_ROLE }}
+  #         aws-region: us-east-1
 
-      - name: Log in to ECR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY_NAME }}
+  #     - name: Log in to ECR
+  #       uses: docker/login-action@v3
+  #       with:
+  #         registry: ${{ env.REGISTRY_NAME }}
       
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v3
       
-      - name: Fetch ReSim CLI
-        run: |
-          curl -L https://github.com/resim-ai/api-client/releases/latest/download/resim-linux-amd64 -o resim-cli
-          chmod +x resim-cli
+  #     - name: Fetch ReSim CLI
+  #       run: |
+  #         curl -L https://github.com/resim-ai/api-client/releases/latest/download/resim-linux-amd64 -o resim-cli
+  #         chmod +x resim-cli
       
-      - name: Select Project
-        run: |
-          ./resim-cli projects select $PROJECT_NAME
+  #     - name: Select Project
+  #       run: |
+  #         ./resim-cli projects select $PROJECT_NAME
 
-      - name: Check for changes in specific paths
-        id: check_changes
-        run: |
-          git fetch origin ${{ github.base_ref }} --depth=1
-          if git diff --quiet origin/${{ github.base_ref }} HEAD -- metrics; then
-            echo "CHANGED=false" >> $GITHUB_ENV
-          else
-            echo "CHANGED=true" >> $GITHUB_ENV
-          fi
+  #     - name: Check for changes in specific paths
+  #       id: check_changes
+  #       run: |
+  #         git fetch origin ${{ github.base_ref }} --depth=1
+  #         if git diff --quiet origin/${{ github.base_ref }} HEAD -- metrics; then
+  #           echo "CHANGED=false" >> $GITHUB_ENV
+  #         else
+  #           echo "CHANGED=true" >> $GITHUB_ENV
+  #         fi
 
-      - name: Docker metadata
-        id: docker_meta
-        uses: docker/metadata-action@v5
-        with:
-          images: |
-            ${{ env.REGISTRY_NAME }}/${{ env.METRICS_BUILD_REPO_NAME }}
-          tags: |
-            type=ref,event=branch,prefix=isaac-sim-metrics-
-            type=ref,event=pr,prefix=isaac-sim-metrics-
-            type=sha,prefix=isaac-sim-metrics-
+  #     - name: Docker metadata
+  #       id: docker_meta
+  #       uses: docker/metadata-action@v5
+  #       with:
+  #         images: |
+  #           ${{ env.REGISTRY_NAME }}/${{ env.METRICS_BUILD_REPO_NAME }}
+  #         tags: |
+  #           type=ref,event=branch,prefix=isaac-sim-metrics-
+  #           type=ref,event=pr,prefix=isaac-sim-metrics-
+  #           type=sha,prefix=isaac-sim-metrics-
 
-      - name: Docker Build Push
-        id: build-push-build
-        uses: docker/build-push-action@v5
-        with:
-          context: metrics
-          file: ./metrics/Dockerfile
-          push: true
-          tags: ${{ steps.docker_meta.outputs.tags }}
+  #     - name: Docker Build Push
+  #       id: build-push-build
+  #       uses: docker/build-push-action@v5
+  #       with:
+  #         context: metrics
+  #         file: ./metrics/Dockerfile
+  #         push: true
+  #         tags: ${{ steps.docker_meta.outputs.tags }}
 
-      - name: Determine Commit SHA
-        id: determine_sha
-        run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "COMMIT_SHA=${{ github.event.pull_request.head.sha }}" >> $GITHUB_ENV
-          else
-            echo "COMMIT_SHA=${{ github.sha }}" >> $GITHUB_ENV
-          fi
+  #     - name: Determine Commit SHA
+  #       id: determine_sha
+  #       run: |
+  #         if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+  #           echo "COMMIT_SHA=${{ github.event.pull_request.head.sha }}" >> $GITHUB_ENV
+  #         else
+  #           echo "COMMIT_SHA=${{ github.sha }}" >> $GITHUB_ENV
+  #         fi
 
-      - name: Register Metrics Build in ReSim
-        if: env.CHANGED == 'true'
-        run: |
-          # Get the last tag (SHA tag) from the list of tags
-          export SHA_TAG=$(echo "${{ steps.docker_meta.outputs.tags }}" | tail -n 1)
-          export METRICS_BUILD_ID=$(./resim-cli metrics-builds create --name "Isaac Sim Metrics Build" --version "$COMMIT_SHA" --image "$SHA_TAG" --systems $SIM_SYSTEM_ID --github | sed 's/.*=//')
-          echo "METRICS_BUILD_ID=$METRICS_BUILD_ID" >> $GITHUB_ENV
+  #     - name: Register Metrics Build in ReSim
+  #       if: env.CHANGED == 'true'
+  #       run: |
+  #         # Get the last tag (SHA tag) from the list of tags
+  #         export SHA_TAG=$(echo "${{ steps.docker_meta.outputs.tags }}" | tail -n 1)
+  #         export METRICS_BUILD_ID=$(./resim-cli metrics-builds create --name "Isaac Sim Metrics Build" --version "$COMMIT_SHA" --image "$SHA_TAG" --systems $SIM_SYSTEM_ID --github | sed 's/.*=//')
+  #         echo "METRICS_BUILD_ID=$METRICS_BUILD_ID" >> $GITHUB_ENV
       
-      - name: Update Test Suite
-        if: env.CHANGED == 'true'
-        run: |
-          ./resim-cli suites revise --test-suite "$SIM_TEST_SUITE" --metrics-build "${{ env.METRICS_BUILD_ID }}"
+  #     - name: Update Test Suite
+  #       if: env.CHANGED == 'true'
+  #       run: |
+  #         ./resim-cli suites revise --test-suite "$SIM_TEST_SUITE" --metrics-build "${{ env.METRICS_BUILD_ID }}"
 
-  run-isaac-sim-test-suite:
-    name: Run the Isaac Sim test suite
-    runs-on: ubuntu-latest
-    needs: [create-new-isaac-sim-mcb-build, create-new-nav2-mcb-build, create-new-isaac-sim-metrics-build]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  # run-isaac-sim-test-suite:
+  #   name: Run the Isaac Sim test suite
+  #   runs-on: ubuntu-latest
+  #   needs: [create-new-isaac-sim-mcb-build, create-new-nav2-mcb-build, create-new-isaac-sim-metrics-build]
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
 
-      - name: Fetch ReSim CLI
-        run: |
-          curl -L https://github.com/resim-ai/api-client/releases/latest/download/resim-linux-amd64 -o resim-cli
-          chmod +x resim-cli
+  #     - name: Fetch ReSim CLI
+  #       run: |
+  #         curl -L https://github.com/resim-ai/api-client/releases/latest/download/resim-linux-amd64 -o resim-cli
+  #         chmod +x resim-cli
       
-      - name: Determine Branch Name and Commit SHA
-        id: determine_branch_and_sha
-        run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "BRANCH_NAME=${{ env.HEAD_REF }}" >> $GITHUB_ENV
-            echo "COMMIT_SHA=${{ github.event.pull_request.head.sha }}" >> $GITHUB_ENV
-          else
-            echo "BRANCH_NAME=${{ env.REF_NAME }}" >> $GITHUB_ENV
-            echo "COMMIT_SHA=${{ github.sha }}" >> $GITHUB_ENV
-          fi
-        env:
-          HEAD_REF: ${{ github.head_ref }}
-          REF_NAME: ${{ github.ref_name }}
+  #     - name: Determine Branch Name and Commit SHA
+  #       id: determine_branch_and_sha
+  #       run: |
+  #         if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+  #           echo "BRANCH_NAME=${{ env.HEAD_REF }}" >> $GITHUB_ENV
+  #           echo "COMMIT_SHA=${{ github.event.pull_request.head.sha }}" >> $GITHUB_ENV
+  #         else
+  #           echo "BRANCH_NAME=${{ env.REF_NAME }}" >> $GITHUB_ENV
+  #           echo "COMMIT_SHA=${{ github.sha }}" >> $GITHUB_ENV
+  #         fi
+  #       env:
+  #         HEAD_REF: ${{ github.head_ref }}
+  #         REF_NAME: ${{ github.ref_name }}
 
-      - name: Select Project
-        run: |
-          ./resim-cli projects select $PROJECT_NAME
+  #     - name: Select Project
+  #       run: |
+  #         ./resim-cli projects select $PROJECT_NAME
 
-      - name: Register Isaac Sim Build in ReSim
-        id: register_build
-        run: |
-          export ISAACSIM_IMAGE=${{ needs.create-new-isaac-sim-mcb-build.outputs.image_tag }}
-          export NAV2_IMAGE=${{ needs.create-new-nav2-mcb-build.outputs.image_tag }}
-          ./resim-cli builds create --build-spec ./builds/docker-compose.yml --use-os-env \
-            --system $SIM_SYSTEM_ID --name "Isaac Sim Build" --description "A build of the Isaac Sim system" \
-            --version "${{ env.COMMIT_SHA }}" --branch "${{ env.BRANCH_NAME }}" --auto-create-branch --github >> $GITHUB_OUTPUT
+  #     - name: Register Isaac Sim Build in ReSim
+  #       id: register_build
+  #       run: |
+  #         export ISAACSIM_IMAGE=${{ needs.create-new-isaac-sim-mcb-build.outputs.image_tag }}
+  #         export NAV2_IMAGE=${{ needs.create-new-nav2-mcb-build.outputs.image_tag }}
+  #         ./resim-cli builds create --build-spec ./builds/docker-compose.yml --use-os-env \
+  #           --system $SIM_SYSTEM_ID --name "Isaac Sim Build" --description "A build of the Isaac Sim system" \
+  #           --version "${{ env.COMMIT_SHA }}" --branch "${{ env.BRANCH_NAME }}" --auto-create-branch --github >> $GITHUB_OUTPUT
       
-      - name: Run Suite
-        run: |
-          echo "Running the Isaac Sim test suite..."
-          ./resim-cli suites run --test-suite "$SIM_TEST_SUITE" --github --build-id "${{ steps.register_build.outputs.build_id }}" >> $GITHUB_OUTPUT
+  #     - name: Run Suite
+  #       run: |
+  #         echo "Running the Isaac Sim test suite..."
+  #         ./resim-cli suites run --test-suite "$SIM_TEST_SUITE" --github --build-id "${{ steps.register_build.outputs.build_id }}" >> $GITHUB_OUTPUT
