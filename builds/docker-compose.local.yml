@@ -6,7 +6,7 @@ services:
       service: isaacsim
     image: resim-isaacsim
     volumes:
-      - shadercache:/shadercache
+      - shadercache:/isaac-sim/shadercache
   nav2:
     extends:
       file: docker-compose.yml

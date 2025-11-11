@@ -7,6 +7,6 @@ export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 /isaac-sim/isaac-sim.streaming.sh --exec '/scripts/open_isaacsim_stage.py --path https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/5.1/Isaac/Samples/ROS2/Scenario/carter_warehouse_navigation.usd --start-on-play' \
   --/isaac/startup/ros_bridge_extension=isaacsim.ros2.bridge \
   --/renderer/shadercache/driverDiskCache/enabled=true \
-  --/rtx/shaderDb/driverAppShaderCachePath=/shadercache \
+  --/rtx/shaderDb/driverAppShaderCachePath=/isaac-sim/shadercache \
   --/rtx/shaderDb/driverAppShaderCacheDirPerDriver=true \
   --/rtx/shaderDb/cachePermutationIndex=0
