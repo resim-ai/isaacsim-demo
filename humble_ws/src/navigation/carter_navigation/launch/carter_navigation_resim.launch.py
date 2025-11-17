@@ -1,5 +1,5 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: Apache-2.0
+# Modified from the original carter_navigation_isaacsim.launch.py file by NVIDIA Corporation.
+# Source: https://github.com/isaac-sim/IsaacSim-ros_workspaces/blob/1e70d8169bc049498bca87f1459b1e1f4f133447/humble_ws/src/navigation/carter_navigation/launch/carter_navigation_isaacsim.launch.py
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,8 +20,7 @@ from typing import Optional
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription, LaunchDescriptionEntity
-from launch.actions import TimerAction
-from launch.actions import IncludeLaunchDescription
+from launch.actions import TimerAction, IncludeLaunchDescription, DeclareLaunchArgument, IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
@@ -64,11 +63,7 @@ def generate_launch_description():
         get_package_share_directory("nav2_bringup"), "launch"
     )
 
-    # rviz_config_dir = os.path.join(
-    #     get_package_share_directory("carter_navigation"),
-    #     "rviz2",
-    #     "carter_navigation.rviz",
-    # )
+    rviz_config_dir = os.path.join(get_package_share_directory("carter_navigation"), "rviz2", "carter_navigation.rviz")
 
     record_node = ExecuteProcess(
         cmd=[
@@ -118,6 +113,11 @@ def generate_launch_description():
         
     nav2_stack = [
         IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(os.path.join(nav2_bringup_launch_dir, "rviz_launch.py")),
+            launch_arguments={"namespace": "", "use_namespace": "False", "rviz_config": rviz_config_dir}.items(),
+            condition=IfCondition(LaunchConfiguration("rviz")),
+        ),
+        IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 [nav2_bringup_launch_dir, "/bringup_launch.py"]
             ),
@@ -126,7 +126,7 @@ def generate_launch_description():
                 "use_sim_time": use_sim_time,
                 "params_file": param_dir,
             }.items(),
-        ),
+        ),        
         Node(
             name="image_throttler",
             package="topic_tools",
@@ -193,5 +193,9 @@ def generate_launch_description():
             on_exit=nav2_stack,
         )
     )
-    return LaunchDescription([checklist_node, nav2_stack_handler])
+    return LaunchDescription([
+        DeclareLaunchArgument("rviz", default_value="true", description="Launch RViz if true"),
+        # checklist_node,
+        # nav2_stack_handler,
+    ] + nav2_stack)
 
