@@ -41,6 +41,10 @@ def get_experience_location() -> str:
 
 def generate_launch_description():
     use_sim_time = LaunchConfiguration("use_sim_time", default="True")
+    
+    # Default initial pose for the robot
+    default_initial_pose = [-6.4, -1.04, 0.0, 0.0, 0.0, 0.99, 0.02]
+    initial_pose = LaunchConfiguration("initial_pose", default=str(default_initial_pose))
 
     map_dir = LaunchConfiguration(
         "map",
@@ -95,7 +99,8 @@ def generate_launch_description():
         ),
         launch_arguments={
             "use_sim_time": use_sim_time,
-            "goal_text_file_path": get_experience_location()
+            "goal_text_file_path": get_experience_location(),
+            "initial_pose": initial_pose,
         }.items(),
     )
 
@@ -170,7 +175,8 @@ def generate_launch_description():
                     ld_record_and_start,
                     "[global_costmap.global_costmap]: start",
                 )
-            )
+            ),
+            condition=IfCondition(LaunchConfiguration("send_goals")),
         ),
         # Shut down when all goals reached
         RegisterEventHandler(
@@ -180,7 +186,8 @@ def generate_launch_description():
                     TimerAction(period=5.0, actions=[Shutdown(reason="All goals completed.")]),
                     "All goals reached.",
                 )
-            )
+            ),
+            condition=IfCondition(LaunchConfiguration("send_goals")),
         )
     ]
     checklist_node = Node(
@@ -188,15 +195,42 @@ def generate_launch_description():
         executable='checklist',
         name='checklist_node',
     )
+    
+    obstacle_generator_node = Node(
+        package='obstacle_generator',
+        executable='obstacle_generator',
+        name='obstacle_generator',
+        parameters=[
+            {
+                "map_yaml_path": map_dir,
+                "goal_text_file_path": get_experience_location(),
+                "initial_pose": initial_pose,
+            }
+        ],
+        output="screen",
+    )
+    
+    # obstacle_generator_handler = RegisterEventHandler(
+    #     OnProcessExit(
+    #         target_action=checklist_node,
+    #         on_exit=[obstacle_generator_node],
+    #     )
+    # )
+    
     nav2_stack_handler = RegisterEventHandler(
         OnProcessExit(
             target_action=checklist_node,
             on_exit=nav2_stack,
         )
     )
+    
     return LaunchDescription([
         DeclareLaunchArgument("rviz", default_value="false", description="Launch RViz if true"),
+        DeclareLaunchArgument("send_goals", default_value="true", description="Send goals if true"),
+        DeclareLaunchArgument("initial_pose", default_value=str(default_initial_pose), 
+                            description="Initial pose of the robot [x, y, z, qx, qy, qz, qw]"),
         checklist_node,
+        # obstacle_generator_handler,
         nav2_stack_handler,
     ])
 

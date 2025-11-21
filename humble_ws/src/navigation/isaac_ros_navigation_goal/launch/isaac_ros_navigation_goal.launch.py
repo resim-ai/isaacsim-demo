@@ -44,6 +44,11 @@ def generate_launch_description():
         default=os.path.join(get_package_share_directory("isaac_ros_navigation_goal"), "assets", "goals.txt"),
     )
 
+    initial_pose = LaunchConfiguration(
+        "initial_pose",
+        default="[-6.4, -1.04, 0.0, 0.0, 0.0, 0.99, 0.02]",
+    )
+
     navigation_goal_node = Node(
         name="set_navigation_goal",
         package="isaac_ros_navigation_goal",
@@ -56,7 +61,7 @@ def generate_launch_description():
                 "action_server_name": "navigate_to_pose",
                 "obstacle_search_distance_in_meters": 0.2,
                 "goal_text_file_path": goal_text_file,
-                "initial_pose": [-6.4, -1.04, 0.0, 0.0, 0.0, 0.99, 0.02],
+                "initial_pose": initial_pose,
                 "use_sim_time": use_sim_time,
             }
         ],
