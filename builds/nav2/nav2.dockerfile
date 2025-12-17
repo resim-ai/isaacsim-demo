@@ -16,6 +16,7 @@ COPY humble_ws/src/checklist/package.xml ./src/checklist/package.xml
 COPY humble_ws/src/isaac_ros2_messages/package.xml ./src/isaac_ros2_messages/package.xml
 COPY humble_ws/src/metrics_emitter/package.xml ./src/metrics_emitter/package.xml
 COPY humble_ws/src/navigation/carter_navigation/package.xml ./src/navigation/carter_navigation/package.xml
+COPY humble_ws/src/custom_message/package.xml ./src/custom_message/package.xml
 
 RUN source /opt/ros/humble/setup.bash && \
 	apt update && \
