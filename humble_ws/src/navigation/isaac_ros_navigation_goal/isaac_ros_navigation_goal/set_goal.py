@@ -218,8 +218,8 @@ class SetNavigationGoal(Node):
         return goal_generator
 
 
-def main():
-    rclpy.init()
+def main(args=None):
+    rclpy.init(args=args)
     set_goal = SetNavigationGoal()
 
     # Spin in a separate thread
@@ -230,7 +230,12 @@ def main():
     
     thread.join()
     set_goal.destroy_node()
-    rclpy.shutdown()
+    # Only shutdown if context is still initialized (callbacks may have already shut it down)
+    try:
+        rclpy.shutdown()
+    except RuntimeError:
+        # Context was already shut down, which is fine
+        pass
 
 
 if __name__ == "__main__":
