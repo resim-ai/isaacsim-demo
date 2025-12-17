@@ -31,15 +31,72 @@ topics:
       position_diff_m: float
 ```
 
+### Global topics
+
+There are some topics that are global to all tests. Their schemas are below:
+
+## metadata
+```
+metadata:
+  schema:
+    org_id: string
+    batch_id: string
+    job_id: string
+    run_counter: int
+    project_id: string
+    experience_id: string
+    experience_name: string
+    experience_tag_ids: string[]
+    experience_tag_names: string[]
+    branch_id: string
+    branch_name: string
+    build_id: string
+    build_name: string
+    build_creation_timestamp: timestamp
+    test_suite_id: string
+    test_suite_name: string
+    test_suite_revision: int
+    job_status: string
+    job_metrics_status: string
+    job_conflated_status: string
+```
+
+## container_performance
+```
+container_performance:
+  schema:
+    org_id: string
+    job_id: string
+    batch_id: string
+    timestamp_seconds: float # seconds since epoch
+    container_name: string
+    cpu_usage_core_seconds_per_sec: float
+    cpu_throttling_seconds: float
+    memory_usage_gib: float
+    memory_limit_failures: float
+    timestamp: float # nanoseconds since container start time
+```
+
+## test_length_seconds
+```
+test_length_seconds:
+  schema:
+    org_id: string
+    job_id: string
+    batch_id: string
+    test_length: float
+    timestamp: float
+```
+
 ## Event topics
 Event topics are marked by having the `event: true` field in the config.yml file.
 The event topic always must have a schema like this:
 ```
 schema:
-name: string
-description: string
-status: status
-tags: string[]
+  name: string
+  description: string
+  status: status
+  tags: string[]
 ```
 The status field is one of the following:
 - PASSED
