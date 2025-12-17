@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-PROJECT_NAME="Isaac Sim x ReSim"
+PROJECT_NAME="An Isaac Sim Sandbox"
 
 # Function to pause execution
 pause() {
@@ -35,7 +35,7 @@ done
 # # Set up the metrics builds
 export NAV2_METRICS_BUILD_ID="$(resim metrics-builds create --project "${PROJECT_NAME}" \
 	--name "Nav2 Metrics" \
-	--image 909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaac-sim-metrics-19995ae \
+	--image 909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaac-sim-metrics-10148d2 \
 	--version "ee1de385c6e5eb71d41d27004b1931e3752aa91c" --github | sed 's/.*=//')"
 # pause
 
@@ -56,30 +56,29 @@ resim test-suites create --project "${PROJECT_NAME}" \
 
 # Set up the three system builds
 # V1 - slow and a bit sad
-ISAACSIM_IMAGE="909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-isaacsim-bdbf838"
-NAV2_IMAGE="909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-nav2-bdbf838"
+export ISAACSIM_IMAGE="909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-isaacsim-73480e1"
+export NAV2_IMAGE="909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-nav2-73480e1"
 export ISAAC_SIM_BUILD_ID_V1="$(resim builds create --project "${PROJECT_NAME}" --build-spec ./builds/docker-compose.yml \
-  --system "Isaac Sim" --name "Isaac Sim Build @ bdbf838" --description "bdbf838: [nav2] Add new metrics" \
-  --branch "main" --version "bdbf838" --auto-create-branch --github | sed 's/.*=//')"
+  --system "Isaac Sim" --name "Isaac Sim Build @ 73480e1" --description "73480e1: [nav2] Add new metrics" \
+  --branch "main" --version "73480e1" --auto-create-branch --github --use-os-env | sed 's/.*=//')"
 sleep 60
 # pause
 
 # V2 - new controller - faster
-ISAACSIM_IMAGE="909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-isaacsim-33edb5e"
-NAV2_IMAGE="909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-nav2-33edb5e"
+export ISAACSIM_IMAGE="909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-isaacsim-62854c1"
+export NAV2_IMAGE="909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-nav2-62854c1"
 export ISAAC_SIM_BUILD_ID_V2="$(resim builds create --project "${PROJECT_NAME}" --build-spec ./builds/docker-compose.yml \
-  --system "Isaac Sim" --name "Isaac Sim Build @ 33edb5e" --description "33edb5e: [nav2] Use MPPI controller" \
-  --branch "main" --version "33edb5e" --auto-create-branch --github | sed 's/.*=//')"
+  --system "Isaac Sim" --name "Isaac Sim Build @ 62854c1" --description "62854c1: [nav2] Use MPPI controller" \
+  --branch "main" --version "62854c1" --auto-create-branch --github --use-os-env | sed 's/.*=//')"
 sleep 60
 # pause
 
 # V3 - new planner - smoother
-ISAACSIM_IMAGE="909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-isaacsim-19995ae"
-NAV2_IMAGE="909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-nav2-19995ae"
+export ISAACSIM_IMAGE="909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-isaacsim-10148d2"
+export NAV2_IMAGE="909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-nav2-10148d2"
 export ISAAC_SIM_BUILD_ID_V3="$(resim builds create --project "${PROJECT_NAME}" --build-spec ./builds/docker-compose.yml \
-  --system "Isaac Sim" --name "Isaac Sim Build @ 19995ae" --description "19995ae: [nav2] Use SmacLattice planner" \
-  --branch "main" --version "19995ae" --auto-create-branch --github | sed 's/.*=//')"
-sleep 60
+  --system "Isaac Sim" --name "Isaac Sim Build @ 10148d2" --description "10148d2: [nav2] Use SmacLattice planner" \
+  --branch "main" --version "10148d2" --auto-create-branch --github --use-os-env | sed 's/.*=//')"
 # pause
 
 # Run the batches
@@ -88,7 +87,6 @@ resim test-suites run --project "${PROJECT_NAME}" \
   --batch-name "Nav2 Baseline" \
   --build-id "${ISAAC_SIM_BUILD_ID_V1}"
 # pause
-
 
 resim test-suites run --project "${PROJECT_NAME}" \
   --test-suite "Nav2 Demo Tests" \
@@ -103,4 +101,4 @@ resim test-suites run --project "${PROJECT_NAME}" \
 # pause
 
 echo "Once the above batches are complete, run the report using the following command: "
-echo "resim reports create --branch main --metrics-build-id $DEFAULT_REPORT_METRICS_BUILD_ID --project "${PROJECT_NAME}" --test-suite \"Nav2 Demo Tests\" --length 1"
+echo "resim reports create --branch main --metrics-build-id $DEFAULT_REPORT_METRICS_BUILD_ID --project \"${PROJECT_NAME}\" --test-suite \"Nav2 Demo Tests\" --length 1"

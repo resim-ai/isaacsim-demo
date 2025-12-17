@@ -1,11 +1,20 @@
 ## Generating the shader cache for a new AMI or Isaac Sim version
 Start up a batch in debug mode with the desired Isaac Sim image.
-```
-$ ./isaac-sim.sh --allow-root --/renderer/shadercache/driverDiskCache/enabled=true --/rtx/shaderDb/driverAppShaderCachePath=/shadercache --/rtx/shaderDb/driverAppShaderCacheDirPerDriver=true --/rtx/shaderDb/cachePermutationIndex=0
+
+```sh
+$ ./isaac-sim.sh --allow-root \
+  --/renderer/shadercache/driverDiskCache/enabled=true \
+  --/rtx/shaderDb/driverAppShaderCachePath=/shadercache \
+  --/rtx/shaderDb/driverAppShaderCacheDirPerDriver=true \
+  --/rtx/shaderDb/cachePermutationIndex=0
 ...
 # wait for "Isaac Sim Full App is loaded." message
 
-$ ./isaac-sim.sh --allow-root --/renderer/shadercache/driverDiskCache/enabled=true --/rtx/shaderDb/driverAppShaderCachePath=/shadercache --/rtx/shaderDb/driverAppShaderCacheDirPerDriver=true --/rtx/shaderDb/cachePermutationIndex=0
+$ ./isaac-sim.sh --allow-root \
+  --/renderer/shadercache/driverDiskCache/enabled=true \
+  --/rtx/shaderDb/driverAppShaderCachePath=/shadercache \
+  --/rtx/shaderDb/driverAppShaderCacheDirPerDriver=true \
+  --/rtx/shaderDb/cachePermutationIndex=0
 ...
 # run it again to check, should be ~20 seconds
 

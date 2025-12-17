@@ -1,10 +1,4 @@
 {
-    "python.analysis.autoImportCompletions": true,
-    "python.analysis.typeCheckingMode": "standard",
-    "python.analysis.extraPaths": [
-        "/opt/ros/humble/lib/python3.10/site-packages",
-        "/opt/ros/humble/local/lib/python3.10/dist-packages"
-    ],
     "python.autoComplete.extraPaths": [
         "/opt/ros/humble/lib/python3.10/site-packages",
         "/opt/ros/humble/local/lib/python3.10/dist-packages"
@@ -16,5 +10,7 @@
         "/opt/ros/humble/local/lib/python3.10/dist-packages",
         "${workspaceFolder}/humble_ws/venv/lib/python3.10/site-packages",
         "${workspaceFolder}/humble_ws/install/custom_message/local/lib/python3.10/dist-packages",
-    ],
+        "${workspaceFolder}/humble_ws/install/simulation_interfaces/local/lib/python3.10/dist-packages",
+        "${workspaceFolder}/humble_ws/install/isaac_ros_navigation_goal/local/lib/python3.10/dist-packages"
+    ]
 }

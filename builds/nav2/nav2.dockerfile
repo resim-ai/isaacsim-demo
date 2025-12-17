@@ -12,17 +12,10 @@ SHELL ["/bin/bash", "-c"]
 # frequently than other code.
 
 COPY humble_ws/src/isaacsim/package.xml ./src/isaacsim/package.xml
-COPY humble_ws/src/isaac_tutorials/package.xml ./src/isaac_tutorials/package.xml
-COPY humble_ws/src/custom_message/package.xml ./src/custom_message/package.xml
-COPY humble_ws/src/ackermann_control/cmdvel_to_ackermann/package.xml ./src/ackermann_control/cmdvel_to_ackermann/package.xml
-COPY humble_ws/src/moveit/isaac_moveit/package.xml ./src/moveit/isaac_moveit/package.xml
 COPY humble_ws/src/checklist/package.xml ./src/checklist/package.xml
-COPY humble_ws/src/humanoid_locomotion_policy_example/h1_fullbody_controller/package.xml ./src/humanoid_locomotion_policy_example/h1_fullbody_controller/package.xml
 COPY humble_ws/src/isaac_ros2_messages/package.xml ./src/isaac_ros2_messages/package.xml
 COPY humble_ws/src/metrics_emitter/package.xml ./src/metrics_emitter/package.xml
 COPY humble_ws/src/navigation/carter_navigation/package.xml ./src/navigation/carter_navigation/package.xml
-COPY humble_ws/src/navigation/iw_hub_navigation/package.xml ./src/navigation/iw_hub_navigation/package.xml
-COPY humble_ws/src/navigation/isaac_ros_navigation_goal/package.xml ./src/navigation/isaac_ros_navigation_goal/package.xml
 
 RUN source /opt/ros/humble/setup.bash && \
 	apt update && \
