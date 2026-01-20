@@ -243,6 +243,8 @@ metrics sets:
       - AMCL Covariance Calibration
       - NIS Over Time
       - Time to reach final goal
+      - CPU Usage
+      - Memory Usage
       # Batch metrics
       - Goal Dwelling Time
       - Total time to reach final Goal
