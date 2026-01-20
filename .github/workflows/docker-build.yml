@@ -11,7 +11,7 @@ env:
   REGISTRY_NAME: 909785973729.dkr.ecr.us-east-1.amazonaws.com
   RESIM_USERNAME: ${{ secrets.RESIM_STAGING_USERNAME }}
   RESIM_PASSWORD: ${{ secrets.RESIM_STAGING_PASSWORD }}
-  PROJECT_NAME: isaac-sim
+  PROJECT_NAME: "An Isaac Sim Sandbox"
   SIM_SYSTEM_ID: 30c93c77-9c39-4ac4-bba8-cd11159d41fa
   SIM_TEST_SUITE: Nav2 Demo Tests
   # SIM_TEST_SUITE: Nav2 Smoke
