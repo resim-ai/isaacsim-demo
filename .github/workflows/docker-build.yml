@@ -191,7 +191,7 @@ jobs:
       
       - name: Select Project
         run: |
-          ./resim-cli projects select $PROJECT_NAME
+          ./resim-cli projects select "${PROJECT_NAME}"
 
       - name: Check for changes in specific paths
         id: check_changes
@@ -275,7 +275,7 @@ jobs:
 
       - name: Select Project
         run: |
-          ./resim-cli projects select $PROJECT_NAME
+          ./resim-cli projects select "${PROJECT_NAME}"
 
       - name: Register Isaac Sim Build in ReSim
         id: register_build
