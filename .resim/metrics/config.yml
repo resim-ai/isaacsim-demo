@@ -244,6 +244,7 @@ metrics sets:
     metrics:
       # Job metrics
       - Stereo Camera Feed
+      - Goal Status
       - Distance to Goal
       - Robot Trajectory
       - Robot Speed
