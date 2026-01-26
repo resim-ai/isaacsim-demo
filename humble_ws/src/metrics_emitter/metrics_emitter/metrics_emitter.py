@@ -63,7 +63,7 @@ class MetricsEmitter(Node):
             Relative timestamp in nanoseconds, or None if no first goal time is set
         """
         if self.first_goal_received_time is None:
-            return None
+            return 0
 
         current_time: Time
         if msg_time is not None:
