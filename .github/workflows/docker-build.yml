@@ -13,10 +13,10 @@ env:
   RESIM_PASSWORD: ${{ secrets.RESIM_STAGING_PASSWORD }}
   PROJECT_NAME: "An Isaac Sim Sandbox"
   SIM_SYSTEM_ID: 30c93c77-9c39-4ac4-bba8-cd11159d41fa
-  SIM_TEST_SUITE: Nav2 Demo Tests
-  # SIM_TEST_SUITE: Nav2 Smoke
+  # SIM_TEST_SUITE: Nav2 Demo Tests
+  SIM_TEST_SUITE: Nav2 Smoke
   # For metrics 2.0
-  RESIM_URL: https://dev-env-pr-2704.api.dev.resim.io/v1
+  RESIM_URL: https://dev-env-pr-2744.api.dev.resim.io/v1
   RESIM_AUTH_URL: https://resim-dev.us.auth0.com/
   SIM_STAGING_SYSTEM_ID: 8ccd7663-ca7d-461c-878f-8da63df9a3af
 
