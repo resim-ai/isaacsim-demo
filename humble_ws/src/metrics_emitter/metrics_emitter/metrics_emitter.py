@@ -71,7 +71,7 @@ class MetricsEmitter(Node):
         else:
             current_time = self.get_clock().now()
             
-        return current_time.nanoseconds - self.first_goal_received_time.nanoseconds
+        return max(0, current_time.nanoseconds - self.first_goal_received_time.nanoseconds)
 
     def get_transform(self, target_frame: str, source_frame: str, time=None):
         """
@@ -135,6 +135,15 @@ class MetricsEmitter(Node):
         """Handle goal status messages."""
         self.get_logger().info(f"Received goal status message at {msg.header.stamp.sec}.{msg.header.stamp.nanosec}")
         self.completed_goals += 1
+
+        if msg.status == "NEW_GOAL":
+            self.emitter.emit('goal_status', {
+                "state": f"Navigating: Goal {self.completed_goals + 1}",
+            }, timestamp=self.get_relative_timestamp(msg.header.stamp))
+        elif msg.status == "COMPLETE":
+            self.emitter.emit('goal_status', {
+                "state": f"Idle",
+            }, timestamp=self.get_relative_timestamp(msg.header.stamp))
 
         # A NEW_GOAL message is sent for the first goal, so we skip
         if self.completed_goals == 0:

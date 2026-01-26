@@ -5,6 +5,9 @@ topics:
     schema:
       distance_m: float
       goal_name: string
+  goal_status:
+    schema:
+      state: string
   goal_reached:
     event: true
     schema:
@@ -58,6 +61,12 @@ metrics:
     query_string: SELECT filename FROM camera_gif
     template_type: system
     template: image
+  Goal Status:
+    type: test
+    description: Status of the goals over time.
+    query_string: SELECT 'Navigation' as "System", timestamp, state FROM goal_status
+    template_type: system
+    template: status_timeline
   Distance to Goal:
     type: test
     description: Distance to each goal over time, measured from odometry. Each line represents a different goal.
