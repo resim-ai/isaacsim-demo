@@ -191,7 +191,7 @@ jobs:
       
       - name: Select Project
         run: |
-          ./resim-cli projects select $PROJECT_NAME
+          ./resim-cli projects select "${PROJECT_NAME}"
 
       - name: Check for changes in specific paths
         id: check_changes
@@ -275,7 +275,7 @@ jobs:
 
       - name: Select Project
         run: |
-          ./resim-cli projects select $PROJECT_NAME
+          ./resim-cli projects select "${PROJECT_NAME}"
 
       - name: Register Isaac Sim Build in ReSim
         id: register_build
@@ -285,7 +285,11 @@ jobs:
           ./resim-cli builds create --build-spec ./builds/docker-compose.yml --use-os-env \
             --system $SIM_STAGING_SYSTEM_ID --name "Isaac Sim Build" --description "A build of the Isaac Sim system" \
             --version "${{ env.COMMIT_SHA }}" --branch "${{ env.BRANCH_NAME }}" --auto-create-branch --github >> $GITHUB_OUTPUT
-      
+
+      - name: Add metrics set to build
+        run: |
+          ./resim-cli suites revise --test-suite "$SIM_TEST_SUITE" --metrics-set "Nav2 Metrics"
+
       - name: Run Suite
         run: |
           echo "Running the Isaac Sim test suite..."
