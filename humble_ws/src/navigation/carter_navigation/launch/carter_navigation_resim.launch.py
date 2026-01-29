@@ -134,6 +134,16 @@ def generate_launch_description():
             }.items(),
         ),        
         Node(
+            package="metrics_emitter",
+            executable="metrics_emitter",
+            output="screen",
+            parameters=[
+                {
+                    "use_sim_time": use_sim_time,
+                }
+            ]
+        ),
+        Node(
             name="image_throttler",
             package="topic_tools",
             executable="throttle",

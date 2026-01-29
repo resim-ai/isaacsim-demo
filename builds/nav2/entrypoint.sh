@@ -3,6 +3,7 @@ set -e
 
 source /opt/ros/humble/setup.bash
 source /humble_ws/install/setup.bash
+source /humble_ws/venv/bin/activate
 
 setsid ros2 launch carter_navigation carter_navigation_resim.launch.py "$@" &
 LAUNCH_PID=$!

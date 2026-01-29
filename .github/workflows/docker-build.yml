@@ -9,11 +9,16 @@ env:
   BUILD_REPO_NAME: isaacsim-test-images
   METRICS_BUILD_REPO_NAME: isaacsim-test-images
   REGISTRY_NAME: 909785973729.dkr.ecr.us-east-1.amazonaws.com
-  RESIM_PASSWORD: ${{ secrets.RESIM_PASSWORD }}
-  RESIM_USERNAME: ${{ secrets.RESIM_USERNAME }}
+  RESIM_USERNAME: ${{ secrets.RESIM_STAGING_USERNAME }}
+  RESIM_PASSWORD: ${{ secrets.RESIM_STAGING_PASSWORD }}
   PROJECT_NAME: isaac-sim
   SIM_SYSTEM_ID: 30c93c77-9c39-4ac4-bba8-cd11159d41fa
-  SIM_TEST_SUITE: Nav2-Demo-Tests
+  SIM_TEST_SUITE: Nav2 Demo Tests
+  # SIM_TEST_SUITE: Nav2 Smoke
+  # For metrics 2.0
+  RESIM_URL: https://api.resim.io/v1
+  RESIM_AUTH_URL: https://resim-dev.us.auth0.com/
+  SIM_STAGING_SYSTEM_ID: 0f975cd6-209d-41c3-a33f-3ce04e078073
 
 permissions:
   id-token: write
@@ -159,6 +164,8 @@ jobs:
   create-new-isaac-sim-metrics-build:
     name: Create New Isaac Sim Metrics Build
     runs-on: ubuntu-latest
+    outputs:
+      metrics_build_id: ${{ steps.register_metrics_build.outputs.metrics_build_id }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -184,13 +191,13 @@ jobs:
       
       - name: Select Project
         run: |
-          ./resim-cli projects select $PROJECT_NAME
+          ./resim-cli projects select "${PROJECT_NAME}"
 
       - name: Check for changes in specific paths
         id: check_changes
         run: |
           git fetch origin ${{ github.base_ref }} --depth=1
-          if git diff --quiet origin/${{ github.base_ref }} HEAD -- metrics; then
+          if git diff --quiet origin/${{ github.base_ref }} HEAD -- metrics humble_ws/src/custom_message .github; then
             echo "CHANGED=false" >> $GITHUB_ENV
           else
             echo "CHANGED=true" >> $GITHUB_ENV
@@ -211,7 +218,7 @@ jobs:
         id: build-push-build
         uses: docker/build-push-action@v5
         with:
-          context: metrics
+          context: .
           file: ./metrics/Dockerfile
           push: true
           tags: ${{ steps.docker_meta.outputs.tags }}
@@ -230,8 +237,9 @@ jobs:
         run: |
           # Get the last tag (SHA tag) from the list of tags
           export SHA_TAG=$(echo "${{ steps.docker_meta.outputs.tags }}" | tail -n 1)
-          export METRICS_BUILD_ID=$(./resim-cli metrics-builds create --name "Isaac Sim Metrics Build" --version "$COMMIT_SHA" --image "$SHA_TAG" --systems $SIM_SYSTEM_ID --github | sed 's/.*=//')
+          export METRICS_BUILD_ID=$(./resim-cli metrics-builds create --name "Isaac Sim Metrics Build" --version "$COMMIT_SHA" --image "$SHA_TAG" --systems $SIM_STAGING_SYSTEM_ID --github | sed 's/.*=//')
           echo "METRICS_BUILD_ID=$METRICS_BUILD_ID" >> $GITHUB_ENV
+          echo "metrics_build_id=$METRICS_BUILD_ID" >> $GITHUB_OUTPUT
       
       - name: Update Test Suite
         if: env.CHANGED == 'true'
@@ -267,7 +275,7 @@ jobs:
 
       - name: Select Project
         run: |
-          ./resim-cli projects select $PROJECT_NAME
+          ./resim-cli projects select "${PROJECT_NAME}"
 
       - name: Register Isaac Sim Build in ReSim
         id: register_build
@@ -275,10 +283,15 @@ jobs:
           export ISAACSIM_IMAGE=${{ needs.create-new-isaac-sim-mcb-build.outputs.image_tag }}
           export NAV2_IMAGE=${{ needs.create-new-nav2-mcb-build.outputs.image_tag }}
           ./resim-cli builds create --build-spec ./builds/docker-compose.yml --use-os-env \
-            --system $SIM_SYSTEM_ID --name "Isaac Sim Build" --description "A build of the Isaac Sim system" \
+            --system $SIM_STAGING_SYSTEM_ID --name "Isaac Sim Build" --description "A build of the Isaac Sim system" \
             --version "${{ env.COMMIT_SHA }}" --branch "${{ env.BRANCH_NAME }}" --auto-create-branch --github >> $GITHUB_OUTPUT
-      
+
+      - name: Add metrics set to build
+        run: |
+          ./resim-cli suites revise --test-suite "$SIM_TEST_SUITE" --metrics-set "Nav2 Metrics"
+
       - name: Run Suite
         run: |
           echo "Running the Isaac Sim test suite..."
-          ./resim-cli suites run --test-suite "$SIM_TEST_SUITE" --github --build-id "${{ steps.register_build.outputs.build_id }}" >> $GITHUB_OUTPUT
+          ./resim-cli suites run --test-suite "$SIM_TEST_SUITE" --build-id "${{ steps.register_build.outputs.build_id }}" \
+            --pool-labels 'resim:metrics2:k8s' --sync-metrics-config
