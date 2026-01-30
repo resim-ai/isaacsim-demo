@@ -16,9 +16,9 @@ env:
   # SIM_TEST_SUITE: Nav2 Demo Tests
   SIM_TEST_SUITE: Nav2 Smoke
   # For metrics 2.0
-  RESIM_URL: https://dev-env-pr-2744.api.dev.resim.io/v1
+  RESIM_URL: https://dev-env-pr-2767.api.dev.resim.io/v1
   RESIM_AUTH_URL: https://resim-dev.us.auth0.com/
-  SIM_STAGING_SYSTEM_ID: 0c644ede-bc5b-437d-bbc1-cfcc276dc7b0
+  SIM_STAGING_SYSTEM_ID: 59377e01-d9bf-4ec9-bfcd-122a0529f103
 
 permissions:
   id-token: write
