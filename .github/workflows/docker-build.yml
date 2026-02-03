@@ -8,7 +8,7 @@ on:
 env:
   BUILD_REPO_NAME: isaacsim-test-images
   METRICS_BUILD_REPO_NAME: isaacsim-test-images
-  REGISTRY_NAME: 909785973729.dkr.ecr.us-east-1.amazonaws.com
+  REGISTRY_NAME: ${{ secrets.ECR_REGISTRY }}
   RESIM_PASSWORD: ${{ secrets.RESIM_PASSWORD }}
   RESIM_USERNAME: ${{ secrets.RESIM_USERNAME }}
   PROJECT_NAME: isaac-sim
@@ -80,8 +80,8 @@ jobs:
           file: ./builds/isaacsim/isaacsim.dockerfile
           push: true
           tags: ${{ steps.docker_meta.outputs.tags }}
-          cache-from: type=registry,ref=909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-isaacsim-5-0-0-docker-cache
-          cache-to: type=registry,ref=909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-isaacsim-5-0-0-docker-cache,mode=max
+          cache-from: type=registry,ref=${{ env.REGISTRY_NAME }}/isaacsim-test-images:isaacsim-mcb-isaacsim-5-0-0-docker-cache
+          cache-to: type=registry,ref=${{ env.REGISTRY_NAME }}/isaacsim-test-images:isaacsim-mcb-isaacsim-5-0-0-docker-cache,mode=max
       
       - uses: imjasonh/setup-crane@v0.4
 
