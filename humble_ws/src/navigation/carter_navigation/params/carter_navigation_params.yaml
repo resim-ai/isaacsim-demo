@@ -117,19 +117,19 @@ bt_navigator_rclcpp_node:
   ros__parameters:
     use_sim_time: True
 
-velocity_smoother: 
+velocity_smoother:
   ros__parameters:
     use_sim_time: True
-    smoothing_frequency: 20.0 
-    scale_velocities: true 
-    feedback: "OPEN_LOOP" 
+    smoothing_frequency: 20.0
+    scale_velocities: true
+    feedback: "OPEN_LOOP"
     max_velocity: [1.5, 0.0, 0.5]
     min_velocity: [-1.5, 0.0, -0.5]
-    # deadband_velocity: [0.0, 0.0, 0.0] 
-    velocity_timeout: 1.0 
+    # deadband_velocity: [0.0, 0.0, 0.0]
+    velocity_timeout: 1.0
     max_accel: [1.0, 0.0, 1.0]
     max_decel: [-1.0, 0.0, -1.0]
-    odom_topic: "chassis/odom" 
+    odom_topic: "chassis/odom"
     odom_duration: 0.1
     # enable_stamped_cmd_vel: true
 
@@ -403,7 +403,7 @@ planner_server:
       lattice_filepath: "$(find-pkg-share isaac_ros_navigation_goal)/assets/control_set_diff_0.08m.json"
       allow_unknown: true                 # Allow traveling in unknown space
       tolerance: 0.25                     # dist-to-goal heuristic cost (distance) for valid tolerance endpoints if exact goal cannot be found.
-      max_iterations: 1000000             # Maximum total iterations to search for before failing (in case unreachable), set to -1 to disable
+      max_iterations: 1                    # Maximum total iterations to search for before failing (in case unreachable), set to -1 to disable
       max_on_approach_iterations: 1000    # Maximum number of iterations after within tolerances to continue to try to find exact solution
       max_planning_time: 5.0              # Max time in s for planner to plan, smooth
       analytic_expansion_ratio: 3.5       # The ratio to attempt analytic expansions during search for final approach.
@@ -477,4 +477,3 @@ waypoint_follower:
       plugin: "nav2_waypoint_follower::WaitAtWaypoint"
       enabled: True
       waypoint_pause_duration: 200
-

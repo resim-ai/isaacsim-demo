@@ -66,7 +66,7 @@ jobs:
             isaac:
               - builds/isaacsim/**
               - humble_ws/src/isaacsim/scripts/open_isaacsim_stage.py
-      
+
       - name: Set up Docker Buildx
         if: ${{ github.event_name != 'pull_request' || steps.filter.outputs.isaac == 'true'}}
         uses: docker/setup-buildx-action@v3
@@ -82,7 +82,7 @@ jobs:
           tags: ${{ steps.docker_meta.outputs.tags }}
           cache-from: type=registry,ref=909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-isaacsim-5-0-0-docker-cache
           cache-to: type=registry,ref=909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-isaacsim-5-0-0-docker-cache,mode=max
-      
+
       - uses: imjasonh/setup-crane@v0.4
 
       - name: Retag existing image
@@ -124,7 +124,7 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY_NAME }}
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -162,7 +162,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-  
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -173,15 +173,15 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY_NAME }}
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      
+
       - name: Fetch ReSim CLI
         run: |
           curl -L https://github.com/resim-ai/api-client/releases/latest/download/resim-linux-amd64 -o resim-cli
           chmod +x resim-cli
-      
+
       - name: Select Project
         run: |
           ./resim-cli projects select $PROJECT_NAME
@@ -226,13 +226,13 @@ jobs:
           fi
 
       - name: Register Metrics Build in ReSim
+        id: register_metrics_build
         if: env.CHANGED == 'true'
         run: |
           # Get the last tag (SHA tag) from the list of tags
           export SHA_TAG=$(echo "${{ steps.docker_meta.outputs.tags }}" | tail -n 1)
           export METRICS_BUILD_ID=$(./resim-cli metrics-builds create --name "Isaac Sim Metrics Build" --version "$COMMIT_SHA" --image "$SHA_TAG" --systems $SIM_SYSTEM_ID --github | sed 's/.*=//')
           echo "METRICS_BUILD_ID=$METRICS_BUILD_ID" >> $GITHUB_ENV
-      
       - name: Update Test Suite
         if: env.CHANGED == 'true'
         run: |
@@ -250,7 +250,7 @@ jobs:
         run: |
           curl -L https://github.com/resim-ai/api-client/releases/latest/download/resim-linux-amd64 -o resim-cli
           chmod +x resim-cli
-      
+
       - name: Determine Branch Name and Commit SHA
         id: determine_branch_and_sha
         run: |
@@ -277,7 +277,7 @@ jobs:
           ./resim-cli builds create --build-spec ./builds/docker-compose.yml --use-os-env \
             --system $SIM_SYSTEM_ID --name "Isaac Sim Build" --description "A build of the Isaac Sim system" \
             --version "${{ env.COMMIT_SHA }}" --branch "${{ env.BRANCH_NAME }}" --auto-create-branch --github >> $GITHUB_OUTPUT
-      
+
       - name: Run Suite
         run: |
           echo "Running the Isaac Sim test suite..."
