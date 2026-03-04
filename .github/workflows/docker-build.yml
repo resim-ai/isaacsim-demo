@@ -11,14 +11,14 @@ env:
   REGISTRY_NAME: 909785973729.dkr.ecr.us-east-1.amazonaws.com
   RESIM_USERNAME: ${{ secrets.RESIM_STAGING_USERNAME }}
   RESIM_PASSWORD: ${{ secrets.RESIM_STAGING_PASSWORD }}
-  PROJECT_NAME: isaac-sim
-  SIM_SYSTEM_ID: 30c93c77-9c39-4ac4-bba8-cd11159d41fa
+  PROJECT_NAME: "An Isaac Sim Sandbox"
+  SIM_SYSTEM_ID: 1bd3c258-ae06-4a37-9fcc-b37f8be8d236
   # SIM_TEST_SUITE: Nav2 Demo Tests
   SIM_TEST_SUITE: Nav2 Smoke
   # For metrics 2.0
-  RESIM_URL: https://api.resim.io/v1
+  RESIM_URL: https://dev-env-pr-2834.api.dev.resim.io/v1
   RESIM_AUTH_URL: https://resim-dev.us.auth0.com/
-  SIM_STAGING_SYSTEM_ID: 0f975cd6-209d-41c3-a33f-3ce04e078073
+  SIM_STAGING_SYSTEM_ID: 59377e01-d9bf-4ec9-bfcd-122a0529f103
 
 permissions:
   id-token: write
