@@ -233,18 +233,17 @@ jobs:
           fi
 
       - name: Register Metrics Build in ReSim
+        id: register_metrics_build
         if: env.CHANGED == 'true'
         run: |
           # Get the last tag (SHA tag) from the list of tags
           export SHA_TAG=$(echo "${{ steps.docker_meta.outputs.tags }}" | tail -n 1)
-          export METRICS_BUILD_ID=$(./resim-cli metrics-builds create --name "Isaac Sim Metrics Build" --version "$COMMIT_SHA" --image "$SHA_TAG" --systems $SIM_STAGING_SYSTEM_ID --github | sed 's/.*=//')
-          echo "METRICS_BUILD_ID=$METRICS_BUILD_ID" >> $GITHUB_ENV
-          echo "metrics_build_id=$METRICS_BUILD_ID" >> $GITHUB_OUTPUT
+          ./resim-cli metrics-builds create --name "Isaac Sim Metrics Build" --version "$COMMIT_SHA" --image "$SHA_TAG" --systems $SIM_STAGING_SYSTEM_ID --github >> $GITHUB_OUTPUT
 
       - name: Update Test Suite
         if: env.CHANGED == 'true'
         run: |
-          ./resim-cli suites revise --test-suite "$SIM_TEST_SUITE" --metrics-build "${{ env.METRICS_BUILD_ID }}"
+          ./resim-cli suites revise --test-suite "$SIM_TEST_SUITE" --metrics-build "${{ steps.register_metrics_build.outputs.metrics_build_id }}"
 
   run-isaac-sim-test-suite:
     name: Run the Isaac Sim test suite
