@@ -22,7 +22,7 @@ setup(
     install_requires=["setuptools"],
     zip_safe=True,
     maintainer="Matt Coomber",
-    maintainer_email="michael@resim.ai",
+    maintainer_email="matt@resim.ai",
     description="A simple package for generating obstacles.",
     license="MIT",
     tests_require=["pytest"],
