@@ -1,0 +1,262 @@
+version: 1
+
+topics:
+  goal_distance_1:
+    schema:
+      distance_m: float
+      goal_name: string
+  goal_status:
+    schema:
+      state: string
+  goal_reached:
+    event: true
+    schema:
+      name: string
+      description: string
+      status: status
+      tags: string[]
+  time_to_goal:
+    schema:
+      time_s: float
+      goal_name: string
+  pose_difference:
+    schema:
+      position_diff_m: float
+  localization_uncertainty:
+    schema:
+      position_uncertainty_m: float
+      yaw_uncertainty_rad: float
+      cov_x: float
+      cov_y: float
+      cov_yaw: float
+      cov_xy: float
+  covariance_accuracy:
+    schema:
+      position_error_m: float
+      yaw_error_rad: float
+      normalized_x: float
+      normalized_y: float
+      normalized_yaw: float
+      mahalanobis_distance: float
+      normalized_innovation_squared: float
+      within_1_sigma: int
+      within_2_sigma: int
+      within_3_sigma: int
+  camera_gif:
+    schema:
+      filename: string
+  robot_trajectory:
+    schema:
+      raw_metric: string
+  odom_linear_velocity:
+    schema:
+      x: float
+      y: float
+      z: float
+
+metrics:
+  Stereo Camera Feed:
+    type: test
+    description: Camera feed from navigation, sped up 2x, starting after first goal received.
+    query_string: SELECT filename FROM camera_gif
+    template_type: system
+    template: image
+  Goal Status:
+    type: test
+    description: Status of the goals over time.
+    query_string: SELECT 'Navigation' as "System", timestamp, state FROM goal_status
+    template_type: system
+    template: state_timeline
+  Distance to Goal:
+    type: test
+    description: Distance to each goal over time, measured from odometry. Each line represents a different goal.
+    query_string: SELECT goal_name as group_name, timestamp / 1E9 AS "Time (s)", distance_m as "Distance to Goal (m)" FROM goal_distance_1
+    template_type: system
+    template: line
+  Robot Trajectory:
+    type: test
+    description: Top-down view of the robot's trajectory throughout the run, with goal points marked as yellow arrows.
+    query_string: SELECT raw_metric FROM robot_trajectory
+    template_type: custom
+    template_file: raw.liquid
+  Localization Error:
+    type: test
+    description: Difference in position between odometry and AMCL localization poses over time.
+    query_string: SELECT 'Error', timestamp / 1E9 AS "Time (s)", position_diff_m as "Position Difference (m)" FROM pose_difference
+    template_type: system
+    template: line
+  Time to reach final goal:
+    type: test
+    description: Time between receiving first goal and reaching final goal.
+    query_string: |
+      SELECT 
+        CASE 
+          WHEN (SELECT COUNT(*) FROM time_to_goal) != 3 THEN 420
+          ELSE sum(time_s)
+        END
+      FROM time_to_goal;
+    template_type: system
+    template: scalar
+    status:
+      query_string: SELECT '1' FROM time_to_goal HAVING COUNT(*) < ?
+      block: 3
+  AMCL Uncertainty Analysis:
+    type: test
+    description: Comparison of AMCL predicted uncertainty against actual localization errors over time.
+    query_string: |
+      SELECT 'Predicted Uncertainty (m)' as group_name, timestamp / 1E9 AS "Time (s)", position_uncertainty_m as "Distance (m)"
+      FROM localization_uncertainty
+      UNION ALL
+      SELECT 'Actual Error (m)' as group_name, timestamp / 1E9 AS "Time (s)", position_error_m as "Distance (m)"
+      FROM covariance_accuracy
+      UNION ALL
+      SELECT 'Mahalanobis Distance' as group_name, timestamp / 1E9 AS "Time (s)", mahalanobis_distance as "Distance (m)"
+      FROM covariance_accuracy;
+    template_type: system
+    template: line
+  AMCL Covariance Calibration:
+    type: test
+    description: Evaluates whether AMCL's uncertainty estimates are realistic. NIS measures if predicted covariance matches actual errors. Low NIS (<2.0) indicates overconfidence; high NIS (>2.0) indicates underconfidence.
+    query_string: |
+      SELECT "Metric", "Value" FROM (
+        SELECT 1 as sort_order, 'Total Samples' as "Metric", CAST(COUNT(*) AS VARCHAR) as "Value"
+        FROM covariance_accuracy
+        UNION ALL
+        SELECT 2 as sort_order, 'Within 1σ (target: ~68%)' as "Metric", CONCAT(CAST(ROUND(100.0 * AVG(CASE WHEN within_1_sigma = 1 THEN 1.0 ELSE 0.0 END), 1) AS VARCHAR), '%') as "Value"
+        FROM covariance_accuracy
+        UNION ALL
+        SELECT 3 as sort_order, 'Within 2σ (target: ~95%)' as "Metric", CONCAT(CAST(ROUND(100.0 * AVG(CASE WHEN within_2_sigma = 1 THEN 1.0 ELSE 0.0 END), 1) AS VARCHAR), '%') as "Value"
+        FROM covariance_accuracy
+        UNION ALL
+        SELECT 4 as sort_order, 'Within 3σ (target: ~99.7%)' as "Metric", CONCAT(CAST(ROUND(100.0 * AVG(CASE WHEN within_3_sigma = 1 THEN 1.0 ELSE 0.0 END), 1) AS VARCHAR), '%') as "Value"
+        FROM covariance_accuracy
+        UNION ALL
+        SELECT 5 as sort_order, 'NIS Median (target: ~2.0)' as "Metric", CAST(ROUND(APPROX_PERCENTILE(normalized_innovation_squared, 0.5), 2) AS VARCHAR) as "Value"
+        FROM covariance_accuracy
+        ORDER BY sort_order
+      );
+    template_type: system
+    template: table
+  NIS Over Time:
+    type: test
+    description: Normalized Innovation Squared plotted over time. Shows how AMCL's covariance calibration varies during the run. Values near 2.0 indicate good calibration; consistently low values show overconfidence.
+    query_string: |
+      SELECT 
+        'NIS (target: ~2.0)' AS group_name, 
+        timestamp / 1E9 AS "Time (s)", 
+        normalized_innovation_squared AS "NIS Value"
+      FROM covariance_accuracy;
+    template_type: system
+    template: line
+  Robot Speed:
+    type: test
+    description: Robot speed over time
+    query_string: |
+      SELECT 
+        'Speed', 
+        timestamp / 1E9 AS "Time (s)", 
+        SQRT(POWER(x, 2) + POWER(y, 2)) AS "Speed (m/s)" 
+      FROM odom_linear_velocity;
+    template_type: system
+    template: line
+  ## Job performance metrics
+  CPU Usage:
+    type: test
+    description: CPU usage over time for nav2 and isaacsim containers.
+    query_string: |
+      SELECT container_name as group_name, timestamp / 1E9 AS "Time (s)", cpu_usage_core_seconds_per_sec AS "CPU Usage (cores)" 
+      FROM container_performance;
+    template_type: system
+    template: line
+  Memory Usage:
+    type: test
+    description: Memory usage over time for containers.
+    query_string: |
+      SELECT container_name as group_name, timestamp / 1E9 AS "Time (s)", memory_usage_gib AS "Memory Usage (GiB)" 
+      FROM container_performance;
+    template_type: system
+    template: line
+  # Batch metrics
+  Total time to reach final Goal:
+    type: batch
+    description: Sum of all 'Time to reach final goal' metrics across all experiences.
+    query_string: SELECT sum(time_s) FROM time_to_goal
+    template_type: system
+    template: scalar
+  Goal Dwelling Time:
+    type: batch
+    description: Time spent within 0.5m of each goal for each job
+    query_string: |
+      SELECT 
+        goal_name as "Goal Name",
+        experience_name as "Experience Name",
+        SUM(time_diff) as "Dwelling Time (s)"
+      FROM (
+        SELECT 
+          m.experience_name,
+          goal_name,
+          CASE 
+            WHEN distance_m <= 0.5 AND LAG(timestamp / 1E9) OVER (PARTITION BY m.experience_name, goal_name ORDER BY timestamp) IS NOT NULL
+            THEN (timestamp / 1E9) - LAG(timestamp / 1E9) OVER (PARTITION BY m.experience_name, goal_name ORDER BY timestamp)
+            ELSE 0 
+          END as time_diff
+        FROM goal_distance_1 gd
+        JOIN metadata m on gd.job_id = m.job_id
+        WHERE distance_m <= 0.5
+      ) dwelling_periods
+      GROUP BY experience_name, goal_name
+      ORDER BY experience_name, goal_name;
+    template_type: system
+    template: bar
+  Maximum Localization Error:
+    type: batch
+    description: Maximum position difference between odometry and AMCL localization across all experiences.
+    query_string: SELECT 'Maximum', m.experience_name as "Experience Name", MAX(position_diff_m) as "Maximum Localization Error (m)" FROM pose_difference pd JOIN metadata m on pd.job_id = m.job_id GROUP BY m.experience_name ORDER BY m.experience_name
+    template_type: system
+    template: bar
+  AMCL Covariance Calibration Summary:
+    type: batch
+    description: Statistical assessment of covariance matrix calibration across all experiences.
+    query_string: |
+      SELECT "Metric", "Value" FROM (
+        SELECT 1 as sort_order, 'Total Samples' as "Metric", CAST(COUNT(*) AS VARCHAR) as "Value"
+        FROM covariance_accuracy
+        UNION ALL
+        SELECT 2 as sort_order, 'Within 1σ (target: ~68%)' as "Metric", CONCAT(CAST(ROUND(100.0 * AVG(CASE WHEN within_1_sigma = 1 THEN 1.0 ELSE 0.0 END), 1) AS VARCHAR), '%') as "Value"
+        FROM covariance_accuracy
+        UNION ALL
+        SELECT 3 as sort_order, 'Within 2σ (target: ~95%)' as "Metric", CONCAT(CAST(ROUND(100.0 * AVG(CASE WHEN within_2_sigma = 1 THEN 1.0 ELSE 0.0 END), 1) AS VARCHAR), '%') as "Value"
+        FROM covariance_accuracy
+        UNION ALL
+        SELECT 4 as sort_order, 'Within 3σ (target: ~99.7%)' as "Metric", CONCAT(CAST(ROUND(100.0 * AVG(CASE WHEN within_3_sigma = 1 THEN 1.0 ELSE 0.0 END), 1) AS VARCHAR), '%') as "Value"
+        FROM covariance_accuracy
+        UNION ALL
+        SELECT 5 as sort_order, 'NIS Median (target: ~2.0)' as "Metric", CAST(ROUND(APPROX_PERCENTILE(normalized_innovation_squared, 0.5), 2) AS VARCHAR) as "Value"
+        FROM covariance_accuracy
+        ORDER BY sort_order
+      );
+    template_type: system
+    template: table
+
+
+metrics sets:
+  Nav2 Metrics:
+    metrics:
+      # Job metrics
+      - Stereo Camera Feed
+      - Goal Status
+      - Distance to Goal
+      - Robot Trajectory
+      - Robot Speed
+      - Localization Error
+      - AMCL Uncertainty Analysis
+      - AMCL Covariance Calibration
+      - NIS Over Time
+      - Time to reach final goal
+      - CPU Usage
+      - Memory Usage
+      # Batch metrics
+      - Goal Dwelling Time
+      - Total time to reach final Goal
+      - Maximum Localization Error
+      - AMCL Covariance Calibration Summary

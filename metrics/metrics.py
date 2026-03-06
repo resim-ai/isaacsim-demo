@@ -11,6 +11,7 @@ import cv2
 import numpy as np
 import imageio
 import rclpy.serialization
+from resim.metrics.python.emissions import emit, Emitter
 from rosidl_runtime_py.utilities import get_message
 import rosbag2_py
 from nav_msgs.msg import Odometry
@@ -20,13 +21,13 @@ from tf2_msgs.msg import TFMessage
 from tf2_ros import Buffer
 import tf2_geometry_msgs
 from rclpy.time import Time, Duration
-from example_interfaces.msg import String
+from custom_message.msg import GoalStatus
 
 import resim.metrics.fetch_job_metrics as fjm
 from resim.metrics.fetch_all_pages import fetch_all_pages
+from resim.metrics.fetch_job_metrics import fetch_job_metrics
 from resim_python_client import AuthenticatedClient
 from resim_python_client.api.batches import list_jobs
-
 
 from resim.metrics.resim_style import resim_plotly_style, resim_colors as RESIM_COLORS, RESIM_TURQUOISE
 from resim.metrics.proto.validate_metrics_proto import validate_job_metrics
@@ -144,19 +145,16 @@ def read_messages(input_bag: str, topics: list[str]):
         ),
     )
 
-    topic_types = reader.get_all_topics_and_types()
-
-    def typename(topic_name):
-        for topic_type in topic_types:
-            if topic_type.name == topic_name:
-                return topic_type.type
-        raise ValueError(f"topic {topic_name} not in bag")
+    # Create a dictionary mapping topic names to their types
+    topic_type_map = {topic.name: topic.type for topic in reader.get_all_topics_and_types()}
 
     while reader.has_next():
         topic, data, timestamp = reader.read_next()
         if topic not in topics:
             continue
-        msg_type = get_message(typename(topic))
+        if topic not in topic_type_map:
+            raise ValueError(f"topic {topic} not in bag")
+        msg_type = get_message(topic_type_map[topic])
         msg = rclpy.serialization.deserialize_message(data, msg_type)
         yield topic, msg, timestamp
 
@@ -368,6 +366,7 @@ def add_distance_to_goal_metric(
 
 def add_camera_gif_metric(
     writer: ResimMetricsWriter,
+    emitter: Emitter,
     input_bag: Path,
     output_path: Path,
     topic: str = "/front_stereo_camera/left/image_raw_throttled",
@@ -454,6 +453,9 @@ def add_camera_gif_metric(
         .with_importance(MetricImportance.ZERO_IMPORTANCE)
         .with_image_data(data)
     )
+    emitter.emit('camera_gif', {
+        'filename': str(output_path.name)
+    })
 
 
 def radians_down_to_up_to_degrees(radians):
@@ -467,7 +469,7 @@ def radians_down_to_up_to_degrees(radians):
     return wrapped
 
 def add_robot_trajectory_metric(
-    writer: ResimMetricsWriter, input_bag: Path, transform_manager: TransformManager
+    writer: ResimMetricsWriter, emitter: Emitter, input_bag: Path, transform_manager: TransformManager
 ):
     """Add a metric showing the robot's trajectory from a top-down view with goal points.
 
@@ -601,6 +603,9 @@ def add_robot_trajectory_metric(
         .with_importance(MetricImportance.HIGH_IMPORTANCE)
         .with_status(MetricStatus.PASSED_METRIC_STATUS)
     )
+    emitter.emit('robot_trajectory', {
+        'raw_metric': str(fig.to_json())
+    })
 
 def add_time_to_goal_metric(writer: ResimMetricsWriter, input_bag: Path):
     first_goal_timestamp: float = math.inf
@@ -612,13 +617,13 @@ def add_time_to_goal_metric(writer: ResimMetricsWriter, input_bag: Path):
         with open(TIMEOUT_PATH, "r", encoding='utf-8') as fp:
             maybe_timeout = int(fp.read())
 
-    msg: String
+    msg: GoalStatus
     for _, msg, timestamp in read_messages(
         str(input_bag), ["/goal/status"]
     ):
-        if msg.data == "NEW_GOAL":
+        if msg.status == "NEW_GOAL":
             first_goal_timestamp = min(first_goal_timestamp, timestamp)
-        elif msg.data == "COMPLETE":
+        elif msg.status == "COMPLETE":
             assert end_timestamp == 0.0, "/goal/status COMPLETE message seen more than once."
             end_timestamp = timestamp
     
@@ -651,7 +656,6 @@ def add_metrics_data(
             unit="metres",
         )
     )
-
 
 def add_pose_difference_metric(
     writer: ResimMetricsWriter, input_bag: Path, transform_manager: TransformManager
@@ -751,6 +755,41 @@ def add_pose_difference_metric(
         .with_status(MetricStatus.PASSED_METRIC_STATUS)
     )
 
+def emit_velocity_data(emitter: Emitter, input_bag: Path):
+    reader = rosbag2_py.SequentialReader()
+    reader.open(
+        rosbag2_py.StorageOptions(uri=str(input_bag), storage_id="mcap"),
+        rosbag2_py.ConverterOptions(
+            input_serialization_format="cdr", output_serialization_format="cdr"
+        ),
+    )
+
+    # Create a dictionary mapping topic names to their types
+    topic_type_map = {topic.name: topic.type for topic in reader.get_all_topics_and_types()}
+    odom_topic = "/chassis/odom"
+    
+    if odom_topic not in topic_type_map:
+        raise ValueError(f"topic {odom_topic} not in bag")
+    
+    msg_type = get_message(topic_type_map[odom_topic])
+    
+    # Track last emission time to enforce 10Hz rate (100ms = 100,000,000 nanoseconds)
+    last_emit_time = None
+    emit_interval_ns = 100_000_000  # 100ms in nanoseconds
+    
+    while reader.has_next():
+        topic, data, timestamp = reader.read_next()
+        if topic == odom_topic:
+            # Only emit if enough time has passed since last emission
+            if last_emit_time is None or (timestamp - last_emit_time) >= emit_interval_ns:
+                msg = rclpy.serialization.deserialize_message(data, msg_type)
+                assert isinstance(msg, Odometry)
+                emitter.emit('odom_linear_velocity', {
+                    'x': msg.twist.twist.linear.x,
+                    'y': msg.twist.twist.linear.y,
+                    'z': msg.twist.twist.linear.z,
+                }, timestamp=timestamp)
+                last_emit_time = timestamp
 
 def run_experience_metrics(args):
     """Run the metrics for a single experience."""
@@ -762,21 +801,25 @@ def run_experience_metrics(args):
     transform_manager = TransformManager()
     transform_manager.collect_transforms(args.log_path)
 
-    add_camera_gif_metric(
-        writer=metrics_writer,
-        input_bag=args.log_path,
-        output_path=Path(args.output_path).with_name("camera.gif"),
-    )
+    with Emitter(config_path=Path("/app/resim_metrics_config.yml"), output_path=Path("/tmp/resim/outputs/metrics.resim.jsonl")) as emitter:
+        add_camera_gif_metric(
+            writer=metrics_writer,
+            emitter=emitter,
+            input_bag=args.log_path,
+            output_path=Path(args.output_path).with_name("camera.gif"),
+        )
 
-    # Add distance to goal metric
-    add_distance_to_goal_metric(metrics_writer, args.log_path, transform_manager)
+        # Add distance to goal metric
+        add_distance_to_goal_metric(metrics_writer, args.log_path, transform_manager)
 
-    # Add robot trajectory metric
-    add_robot_trajectory_metric(metrics_writer, args.log_path, transform_manager)
+        # Add robot trajectory metric
+        add_robot_trajectory_metric(metrics_writer, emitter, args.log_path, transform_manager)
 
-    # Add pose difference metric
-    add_pose_difference_metric(metrics_writer, args.log_path, transform_manager)
-    add_time_to_goal_metric(metrics_writer, args.log_path)
+        # Add pose difference metric
+        add_pose_difference_metric(metrics_writer, args.log_path, transform_manager)
+        add_time_to_goal_metric(metrics_writer, args.log_path)
+
+        emit_velocity_data(emitter, args.log_path)
 
     write_proto(metrics_writer, args.output_path)
 
@@ -899,7 +942,7 @@ def run_batch_metrics(args: argparse.Namespace) -> None:
         job_to_metrics, "pose_difference"
     )
 
-    # Create DataFrame for localization error statistics
+    # Create DataFrame for localization error statisticss
     localization_error_stats = pd.concat(
         [
             pd.DataFrame(

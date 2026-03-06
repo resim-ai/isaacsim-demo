@@ -3,6 +3,7 @@ set -e
 
 source /opt/ros/humble/setup.bash
 source /humble_ws/install/setup.bash
+source /humble_ws/venv/bin/activate
 
 setsid ros2 launch carter_navigation carter_navigation_resim.launch.py "$@" &
 LAUNCH_PID=$!
@@ -26,7 +27,7 @@ while [ ! -f /tmp/isaac_ready ]; do
     sleep 1
 done
 
-TIMEOUT="${RESIM_NAV2_TIMEOUT:-420}"
+TIMEOUT="${RESIM_NAV2_TIMEOUT:-30}"
 SECONDS=0
 while [ $SECONDS -lt $TIMEOUT ]; do
     if ! kill -0 $LAUNCH_PID 2>/dev/null; then
