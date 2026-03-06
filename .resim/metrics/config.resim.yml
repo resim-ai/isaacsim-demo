@@ -97,6 +97,7 @@ metrics:
       FROM time_to_goal;
     template_type: system
     template: scalar
+    units: seconds
     status:
       query_string: SELECT '1' FROM time_to_goal HAVING COUNT(*) < ?
       block: 3
@@ -159,23 +160,6 @@ metrics:
       FROM odom_linear_velocity;
     template_type: system
     template: line
-  ## Job performance metrics
-  CPU Usage:
-    type: test
-    description: CPU usage over time for nav2 and isaacsim containers.
-    query_string: |
-      SELECT container_name as group_name, timestamp / 1E9 AS "Time (s)", cpu_usage_core_seconds_per_sec AS "CPU Usage (cores)" 
-      FROM container_performance;
-    template_type: system
-    template: line
-  Memory Usage:
-    type: test
-    description: Memory usage over time for containers.
-    query_string: |
-      SELECT container_name as group_name, timestamp / 1E9 AS "Time (s)", memory_usage_gib AS "Memory Usage (GiB)" 
-      FROM container_performance;
-    template_type: system
-    template: line
   # Batch metrics
   Total time to reach final Goal:
     type: batch
@@ -183,6 +167,7 @@ metrics:
     query_string: SELECT sum(time_s) FROM time_to_goal
     template_type: system
     template: scalar
+    units: seconds
   Goal Dwelling Time:
     type: batch
     description: Time spent within 0.5m of each goal for each job
@@ -253,8 +238,6 @@ metrics sets:
       - AMCL Covariance Calibration
       - NIS Over Time
       - Time to reach final goal
-      - CPU Usage
-      - Memory Usage
       # Batch metrics
       - Goal Dwelling Time
       - Total time to reach final Goal

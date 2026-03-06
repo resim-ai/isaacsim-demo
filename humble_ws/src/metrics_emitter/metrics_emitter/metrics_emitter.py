@@ -20,7 +20,7 @@ class MetricsEmitter(Node):
         super().__init__('metrics_emitter')
         self.get_logger().info('Metrics emitter node initialized')
 
-        self.emitter = Emitter(config_path=Path("/humble_ws/resim_metrics_config.yml"))
+        self.emitter = Emitter(config_path=Path("/humble_ws/resim_metrics_config.resim.yml"))
 
         # build transform buffer
         self.tf_buffer = Buffer()

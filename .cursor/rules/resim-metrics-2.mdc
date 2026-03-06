@@ -5,8 +5,8 @@ alwaysApply: false
 
 ## Overview
 ReSim Metrics 2.0 is an exciting new feature that allows you to emit and dynamically query metrics from your system.
-Metrics are emitted as JSON objects and stored in an `emissions.ndjson` file.
-Topics and metrics are defined in the `.resim/metrics/config.yml` file.
+Metrics are emitted as JSON objects and stored in an `emissions.resim.jsonl` file.
+Topics and metrics are defined in the `.resim/metrics/config.resim.yml` file.
 
 ## Topics
 Topics define the data that is emitted from your system. They may contain a timestamp.
@@ -89,7 +89,7 @@ test_length_seconds:
 ```
 
 ## Event topics
-Event topics are marked by having the `event: true` field in the config.yml file.
+Event topics are marked by having the `event: true` field in the config.resim.yml file.
 The event topic always must have a schema like this:
 ```
 schema:

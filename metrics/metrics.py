@@ -801,7 +801,7 @@ def run_experience_metrics(args):
     transform_manager = TransformManager()
     transform_manager.collect_transforms(args.log_path)
 
-    with Emitter(config_path=Path("/app/resim_metrics_config.yml"), output_path=Path("/tmp/resim/outputs/metrics.resim.jsonl")) as emitter:
+    with Emitter(config_path=Path("/app/resim_metrics_config.resim.yml"), output_path=Path("/tmp/resim/outputs/metrics.resim.jsonl")) as emitter:
         add_camera_gif_metric(
             writer=metrics_writer,
             emitter=emitter,
@@ -1079,9 +1079,9 @@ def main():
         run_experience_metrics(args)
     elif args.batch_metrics_config_path.exists():
         logger.info(
-            f"Running batch metrics for {str(args.batch_metrics_config_path)}..."
+            f"Skipping batch metrics for {str(args.batch_metrics_config_path)}..."
         )
-        run_batch_metrics(args)
+        # run_batch_metrics(args)
     else:
         logger.error("Couldn't find input files for experience or batch metrics jobs.")
         exit(1)
