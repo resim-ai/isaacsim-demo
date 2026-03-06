@@ -8,7 +8,7 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPo
 from rclpy.time import Time
 from builtin_interfaces.msg import Time as MsgTime
 from custom_message.msg import GoalStatus
-from resim.metrics.python.emissions import Emitter
+from resim.sdk.metrics import Emitter
 from tf2_ros import Buffer, TransformListener, Duration
 import tf2_geometry_msgs
 import os

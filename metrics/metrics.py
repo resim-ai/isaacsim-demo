@@ -11,7 +11,7 @@ import cv2
 import numpy as np
 import imageio
 import rclpy.serialization
-from resim.metrics.python.emissions import emit, Emitter
+from resim.sdk.metrics import Emitter
 from rosidl_runtime_py.utilities import get_message
 import rosbag2_py
 from nav_msgs.msg import Odometry
@@ -26,8 +26,8 @@ from custom_message.msg import GoalStatus
 import resim.metrics.fetch_job_metrics as fjm
 from resim.metrics.fetch_all_pages import fetch_all_pages
 from resim.metrics.fetch_job_metrics import fetch_job_metrics
-from resim_python_client import AuthenticatedClient
-from resim_python_client.api.batches import list_jobs
+from resim.sdk.client import AuthenticatedClient
+from resim.sdk.client.api.batches import list_jobs
 
 from resim.metrics.resim_style import resim_plotly_style, resim_colors as RESIM_COLORS, RESIM_TURQUOISE
 from resim.metrics.proto.validate_metrics_proto import validate_job_metrics
@@ -821,7 +821,7 @@ def run_experience_metrics(args):
 
         emit_velocity_data(emitter, args.log_path)
 
-    write_proto(metrics_writer, args.output_path)
+    # write_proto(metrics_writer, args.output_path)
 
 
 def add_strip_or_box_plot(
@@ -1068,7 +1068,7 @@ def run_batch_metrics(args: argparse.Namespace) -> None:
         .with_unit("seconds")
     )
 
-    write_proto(writer, args.output_path)
+    # write_proto(writer, args.output_path)
 
 
 def main():
