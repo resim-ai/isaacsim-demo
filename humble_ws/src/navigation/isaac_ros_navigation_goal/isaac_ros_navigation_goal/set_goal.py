@@ -17,6 +17,7 @@ import rclpy
 from rclpy.action import ActionClient
 from rclpy.duration import Duration
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPolicy
 from nav2_msgs.action import NavigateToPose
 from std_msgs.msg import Header
 from .obstacle_map import GridMap
@@ -53,9 +54,15 @@ class SetNavigationGoal(Node):
         assert self.MAX_ITERATION_COUNT > 0
         self.curr_iteration_count = 1
 
+        goal_qos = QoSProfile(
+            reliability=ReliabilityPolicy.RELIABLE,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=10,
+        )
         self.__initial_goal_publisher = self.create_publisher(PoseWithCovarianceStamped, "/initialpose", 5)
-        self.__goal_publisher = self.create_publisher(PoseStamped, "/goal", 5)
-        self.__goal_status_publisher = self.create_publisher(GoalStatus, "/goal/status", 5)
+        self.__goal_publisher = self.create_publisher(PoseStamped, "/goal", goal_qos)
+        self.__goal_status_publisher = self.create_publisher(GoalStatus, "/goal/status", goal_qos)
 
         self.__initial_pose = self.get_parameter("initial_pose").value
         self.__is_initial_pose_sent = True if self.__initial_pose is None else False

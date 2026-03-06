@@ -4,6 +4,7 @@ from geometry_msgs.msg import PoseWithCovarianceStamped, Pose, PoseStamped
 from nav_msgs.msg import Odometry
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPolicy
 from rclpy.time import Time
 from builtin_interfaces.msg import Time as MsgTime
 from custom_message.msg import GoalStatus
@@ -26,9 +27,15 @@ class MetricsEmitter(Node):
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
         # data for distance to goal metric
+        goal_qos = QoSProfile(
+            reliability=ReliabilityPolicy.RELIABLE,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=10,
+        )
         callback_group = MutuallyExclusiveCallbackGroup() # ensure callbacks are not called concurrently
-        self.goal_subscriber = self.create_subscription(PoseStamped, '/goal', self.goal_callback, 10, callback_group=callback_group)
-        self.goal_status_subscriber = self.create_subscription(GoalStatus, '/goal/status', self.goal_status_callback, 10, callback_group=callback_group)
+        self.goal_subscriber = self.create_subscription(PoseStamped, '/goal', self.goal_callback, qos_profile=goal_qos, callback_group=callback_group)
+        self.goal_status_subscriber = self.create_subscription(GoalStatus, '/goal/status', self.goal_status_callback, qos_profile=goal_qos, callback_group=callback_group)
         self.chassis_odom_subscriber = self.create_subscription(Odometry, '/chassis/odom', self.chassis_odom_callback, 10, callback_group=callback_group)
         
         # data for pose difference metric
@@ -63,7 +70,7 @@ class MetricsEmitter(Node):
             Relative timestamp in nanoseconds, or None if no first goal time is set
         """
         if self.first_goal_received_time is None:
-            return 0
+            return None
 
         current_time: Time
         if msg_time is not None:
