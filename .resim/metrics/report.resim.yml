@@ -1,0 +1,20 @@
+version: 1
+
+topics: {}
+
+metrics:
+  Total time to reach final Goal (by build):
+    type: report
+    description: Total time to reach final goal aggregated per batch, plotted by build creation date (category). X-axis is "Month Day"; y-axis is total time (s).
+    query_string: |
+      SELECT
+        'Total time to reach final Goal' AS group_name,
+        date_format(MAX(m.build_creation_timestamp), '%h:%m %M %e') AS "Build date",
+        SUM(t.time_s) AS "Time (s)"
+      FROM time_to_goal t
+      JOIN metadata m ON t.job_id = m.job_id
+      WHERE m.build_creation_timestamp >= current_timestamp - interval '3' month
+      GROUP BY m.batch_id
+      ORDER BY MAX(m.build_creation_timestamp);
+    template_type: system
+    template: line
