@@ -15,14 +15,17 @@
 
 import rclpy
 from rclpy.action import ActionClient
+from rclpy.duration import Duration
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPolicy
 from nav2_msgs.action import NavigateToPose
+from std_msgs.msg import Header
 from .obstacle_map import GridMap
 from .goal_generators import RandomGoalGenerator, GoalReader
 import sys
 from geometry_msgs.msg import PoseWithCovarianceStamped, PoseStamped
-from example_interfaces.msg import String
-import time
+from custom_message.msg import GoalStatus
+import threading
 
 
 class SetNavigationGoal(Node):
@@ -51,9 +54,15 @@ class SetNavigationGoal(Node):
         assert self.MAX_ITERATION_COUNT > 0
         self.curr_iteration_count = 1
 
+        goal_qos = QoSProfile(
+            reliability=ReliabilityPolicy.RELIABLE,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=10,
+        )
         self.__initial_goal_publisher = self.create_publisher(PoseWithCovarianceStamped, "/initialpose", 5)
-        self.__goal_publisher = self.create_publisher(PoseStamped, "/goal", 5)
-        self.__goal_status_publisher = self.create_publisher(String, "/goal/status", 5)
+        self.__goal_publisher = self.create_publisher(PoseStamped, "/goal", goal_qos)
+        self.__goal_status_publisher = self.create_publisher(GoalStatus, "/goal/status", goal_qos)
 
         self.__initial_pose = self.get_parameter("initial_pose").value
         self.__is_initial_pose_sent = True if self.__initial_pose is None else False
@@ -89,12 +98,11 @@ class SetNavigationGoal(Node):
             # Assumption is that initial pose is set after publishing first time in this duration.
             # Can be changed to more sophisticated way. e.g. /particlecloud topic has no msg until
             # the initial pose is set.
-            time.sleep(5)
+            self.get_clock().sleep_for(Duration(nanoseconds=500_000_000))
             self.get_logger().info("Sending first goal")
 
-
-        self.__goal_status_publisher.publish(String(data="NEW_GOAL"))
         self._action_client.wait_for_server()
+        self.__goal_status_publisher.publish(GoalStatus(header=Header(stamp=self.get_clock().now().to_msg()), status="NEW_GOAL"))
         goal_msg = self.__get_goal()
 
         if goal_msg is None:
@@ -175,7 +183,7 @@ class SetNavigationGoal(Node):
             self.curr_iteration_count += 1
             self.send_goal()
         else:
-            self.__goal_status_publisher.publish(String(data="COMPLETE"))
+            self.__goal_status_publisher.publish(GoalStatus(header=Header(stamp=self.get_clock().now().to_msg()), status="COMPLETE"))
             self.get_logger().info("All goals reached.")
             rclpy.shutdown()
 
@@ -217,11 +225,24 @@ class SetNavigationGoal(Node):
         return goal_generator
 
 
-def main():
-    rclpy.init()
+def main(args=None):
+    rclpy.init(args=args)
     set_goal = SetNavigationGoal()
+
+    # Spin in a separate thread
+    thread = threading.Thread(target=rclpy.spin, args=(set_goal, ), daemon=True)
+    thread.start()
+
     result = set_goal.send_goal()
-    rclpy.spin(set_goal)
+    
+    thread.join()
+    set_goal.destroy_node()
+    # Only shutdown if context is still initialized (callbacks may have already shut it down)
+    try:
+        rclpy.shutdown()
+    except RuntimeError:
+        # Context was already shut down, which is fine
+        pass
 
 
 if __name__ == "__main__":
