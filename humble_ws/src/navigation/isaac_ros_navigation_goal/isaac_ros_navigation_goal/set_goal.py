@@ -43,6 +43,9 @@ class SetNavigationGoal(Node):
                 ("map_yaml_path", rclpy.Parameter.Type.STRING),
                 ("goal_text_file_path", rclpy.Parameter.Type.STRING),
                 ("initial_pose", rclpy.Parameter.Type.DOUBLE_ARRAY),
+                ("max_goal_send_retries", 3),
+                ("initial_pose_settle_sec", 0.5),
+                ("server_wait_timeout_sec", 60.0),
             ],
         )
 
@@ -66,6 +69,8 @@ class SetNavigationGoal(Node):
 
         self.__initial_pose = self.get_parameter("initial_pose").value
         self.__is_initial_pose_sent = True if self.__initial_pose is None else False
+        self._goal_send_retries = 0
+        self._current_goal_msg = None
 
     def __send_initial_pose(self):
         """
@@ -95,20 +100,28 @@ class SetNavigationGoal(Node):
             self.__send_initial_pose()
             self.__is_initial_pose_sent = True
 
-            # Assumption is that initial pose is set after publishing first time in this duration.
-            # Can be changed to more sophisticated way. e.g. /particlecloud topic has no msg until
-            # the initial pose is set.
-            self.get_clock().sleep_for(Duration(nanoseconds=500_000_000))
+            # Give Nav2 time to be ready after initial pose (increase in production if goals are rejected).
+            settle_sec = float(self.get_parameter("initial_pose_settle_sec").value)
+            self.get_clock().sleep_for(Duration(seconds=settle_sec))
             self.get_logger().info("Sending first goal")
 
-        self._action_client.wait_for_server()
+        timeout_sec = float(self.get_parameter("server_wait_timeout_sec").value)
+        if not self._action_client.wait_for_server(timeout_sec=timeout_sec):
+            self.get_logger().error("Action server not available after %.1f s" % timeout_sec)
+            rclpy.shutdown()
+            sys.exit(1)
+
         self.__goal_status_publisher.publish(GoalStatus(header=Header(stamp=self.get_clock().now().to_msg()), status="NEW_GOAL"))
-        goal_msg = self.__get_goal()
+        # Use cached goal only when retrying after rejection; otherwise get next goal.
+        if self._goal_send_retries == 0:
+            self._current_goal_msg = None
+        goal_msg = self._current_goal_msg if self._current_goal_msg is not None else self.__get_goal()
 
         if goal_msg is None:
             rclpy.shutdown()
             sys.exit(1)
 
+        self._current_goal_msg = goal_msg
         self.__goal_publisher.publish(goal_msg.pose)
 
         self._send_goal_future = self._action_client.send_goal_async(
@@ -118,20 +131,46 @@ class SetNavigationGoal(Node):
 
     def __goal_response_callback(self, future):
         """
-        Callback function to check the response(goal accpted/rejected) from the server.\n
-        If the Goal is rejected it stops the execution for now.(We can change to resample the pose if rejected.)
+        Callback function to check the response(goal accepted/rejected) from the server.
+        On rejection (e.g. RMW timeout "Failed to send goal response") retries up to
+        max_goal_send_retries before exiting.
         """
+        try:
+            goal_handle = future.result()
+        except Exception as e:
+            self.get_logger().warn("Goal response failed: %s" % e)
+            goal_handle = None
 
-        goal_handle = future.result()
-        if not goal_handle.accepted:
-            self.get_logger().info("Goal rejected :(")
+        if goal_handle is None or not goal_handle.accepted:
+            self._goal_send_retries += 1
+            max_retries = int(self.get_parameter("max_goal_send_retries").value)
+            if self._goal_send_retries <= max_retries:
+                self.get_logger().warn(
+                    "Goal rejected or response lost (retry %d/%d). "
+                    "Common in production when bt_navigator reports 'Failed to send goal response'. "
+                    "Retrying in 2 s..."
+                    % (self._goal_send_retries, max_retries)
+                )
+                self.create_timer(2.0, self.__retry_send_goal)
+                return
+            self.get_logger().error("Goal rejected after %d retries." % max_retries)
             rclpy.shutdown()
             sys.exit(1)
 
+        self._goal_send_retries = 0
         self.get_logger().info("Goal accepted :)")
 
         self._get_result_future = goal_handle.get_result_async()
         self._get_result_future.add_done_callback(self.__get_result_callback)
+
+    def __retry_send_goal(self):
+        """Resend only the action goal after a rejection/timeout (same goal, no new iteration). Topic /goal is not republished; it is assumed reliably delivered."""
+        if self._current_goal_msg is None:
+            return
+        self._send_goal_future = self._action_client.send_goal_async(
+            self._current_goal_msg, feedback_callback=self.__feedback_callback
+        )
+        self._send_goal_future.add_done_callback(self.__goal_response_callback)
 
     def __get_goal(self):
         """

@@ -63,11 +63,11 @@ metrics:
     template: image
   Time to reach final goal:
     type: test
-    description: Time between receiving first goal and reaching final goal; blocks if all 3 goals are not reached within 300 seconds.
+    description: Time between receiving first goal and reaching final goal; blocks if all 3 goals are not reached within 75 seconds.
     query_string: |
       SELECT 
         CASE 
-          WHEN (SELECT COUNT(*) FROM time_to_goal) != 3 THEN 300
+          WHEN (SELECT COUNT(*) FROM time_to_goal) != 3 THEN 75
           ELSE sum(time_s)
         END
       FROM time_to_goal;
@@ -164,7 +164,17 @@ metrics:
   Total time to reach final Goal:
     type: batch
     description: Sum of all 'Time to reach final goal' metrics across all experiences.
-    query_string: SELECT sum(time_s) FROM time_to_goal
+    query_string: |
+      SELECT SUM(
+        CASE WHEN goal_count != 3 THEN 75 ELSE total_time END
+      )
+      FROM (
+        SELECT job_id,
+          COUNT(*) as goal_count,
+          SUM(time_s) as total_time
+        FROM time_to_goal
+        GROUP BY job_id
+      ) per_job;
     template_type: system
     template: scalar
     units: seconds
