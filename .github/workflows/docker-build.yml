@@ -294,4 +294,4 @@ jobs:
         run: |
           echo "Running the Isaac Sim test suite..."
           ./resim-cli suites run --test-suite "$SIM_TEST_SUITE" --build-id "${{ steps.register_build.outputs.build_id }}" \
-            --pool-labels 'resim:metrics2:k8s' --sync-metrics-config
+            --pool-labels 'resim:metrics2:k8s' --sync-metrics-config --metrics-config-path .resim/metrics/config.resim.yml
