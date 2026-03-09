@@ -63,6 +63,10 @@ def generate_launch_description():
                 "goal_text_file_path": goal_text_file,
                 "initial_pose": initial_pose,
                 "use_sim_time": use_sim_time,
+                # Production: increase initial_pose_settle_sec (e.g. 3.0) if bt_navigator reports "Failed to send goal response"
+                "initial_pose_settle_sec": 0.5,
+                "max_goal_send_retries": 3,
+                "server_wait_timeout_sec": 60.0,
             }
         ],
         output="screen",
