@@ -1,5 +1,6 @@
 #!/bin/bash
 source /opt/ros/humble/setup.bash
+source /humble_ws/install/setup.bash
 
 set -euxo pipefail
 
