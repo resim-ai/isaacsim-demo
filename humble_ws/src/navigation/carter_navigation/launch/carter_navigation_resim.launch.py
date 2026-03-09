@@ -105,7 +105,7 @@ def generate_launch_description():
     )
 
     ld_record_and_start = LaunchDescription(
-        [record_node, TimerAction(period=5.0, actions=[ld_automatic_goal])]
+        [record_node, TimerAction(period=10.0, actions=[ld_automatic_goal])]
     )
 
     def execute_second_node_if_condition_met(event: ProcessIO, second_node_action: LaunchDescriptionEntity, message: str) -> Optional[LaunchDescriptionEntity]:
@@ -133,6 +133,16 @@ def generate_launch_description():
                 "params_file": param_dir,
             }.items(),
         ),        
+        Node(
+            package="metrics_emitter",
+            executable="metrics_emitter",
+            output="screen",
+            parameters=[
+                {
+                    "use_sim_time": use_sim_time,
+                }
+            ]
+        ),
         Node(
             name="image_throttler",
             package="topic_tools",
