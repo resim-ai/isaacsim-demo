@@ -4,7 +4,7 @@ Start up a batch in debug mode with the desired Isaac Sim image.
 ```sh
 $ ./isaac-sim.sh --allow-root \
   --/renderer/shadercache/driverDiskCache/enabled=true \
-  --/rtx/shaderDb/driverAppShaderCachePath=/shadercache \
+  --/rtx/shaderDb/driverAppShaderCachePath=/isaac-sim/shadercache \
   --/rtx/shaderDb/driverAppShaderCacheDirPerDriver=true \
   --/rtx/shaderDb/cachePermutationIndex=0
 ...
@@ -12,13 +12,13 @@ $ ./isaac-sim.sh --allow-root \
 
 $ ./isaac-sim.sh --allow-root \
   --/renderer/shadercache/driverDiskCache/enabled=true \
-  --/rtx/shaderDb/driverAppShaderCachePath=/shadercache \
+  --/rtx/shaderDb/driverAppShaderCachePath=/isaac-sim/shadercache \
   --/rtx/shaderDb/driverAppShaderCacheDirPerDriver=true \
   --/rtx/shaderDb/cachePermutationIndex=0
 ...
 # run it again to check, should be ~20 seconds
 
-$ cd /
+$ cd /isaac-sim
 $ tar czf shadercache.tar.gz shadercache/
 $ tar tf shadercache.tar.gz 
 shadercache/
@@ -35,7 +35,7 @@ $ mv shadercache.tar.gz /tmp/resim/outputs
 Download the shader cache from the job's logs in the platform to a `build` directory under the Isaac version you're building for.
 Copy it to s3 e.g.:
 ```
-aws s3 cp build/shadercache.tar.gz s3://resim-binaries/isaac-cache/shadercache-4-2-0-resim-eks-gpu-20250814124908.tar.gz
+aws s3 cp build/shadercache.tar.gz s3://resim-binaries/isaac-cache/shadercache-5-1-0-resim-eks-gpu-20260217112256.tar.gz
 ```
 Update the references in `rebuild_and_push_cache.sh` script to the new version.
 
