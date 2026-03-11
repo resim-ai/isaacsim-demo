@@ -17,7 +17,7 @@ class Checklist(Node):
         super().__init__("checklist")
         self.future = future
         self.subscription = self.create_subscription(
-            TFMessage, "/tf", self.listener_callback, 10
+            TFMessage, "tf", self.listener_callback, 10
         )
         self.received_odom = False
 

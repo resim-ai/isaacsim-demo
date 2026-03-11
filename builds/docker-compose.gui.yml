@@ -16,7 +16,7 @@ services:
     extends:
       file: docker-compose.yml
       service: nav2
-    command: ["rviz:=true", "send_goals:=false"]
+    command: ["rviz:=true", "send_goals:=true"]
     environment:
       - DISPLAY=${DISPLAY}
       - RESIM_NAV2_TIMEOUT=3600
