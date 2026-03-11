@@ -25,7 +25,7 @@ RUN source /opt/ros/humble/setup.bash && \
 
 COPY /humble_ws/requirements.txt ./requirements.txt
 
-RUN	python3 -m virtualenv venv && \
+RUN	python3 -m virtualenv --system-site-packages venv && \
 	source venv/bin/activate && \
 	pip install --no-cache-dir -r requirements.txt
 
