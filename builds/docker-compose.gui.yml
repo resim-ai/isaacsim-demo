@@ -9,7 +9,7 @@ services:
       - DISPLAY=${DISPLAY}
       - GUI=true
     volumes:
-      - shadercache:/shadercache
+      - shadercache:/isaac-sim/shadercache
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
   nav2:
     image: resim-humble-nav2
