@@ -43,7 +43,7 @@ def generate_launch_description():
     use_sim_time = LaunchConfiguration("use_sim_time", default="True")
     
     # Default initial pose for the robot
-    default_initial_pose = [-6.4, -1.04, 0.0, 0.0, 0.0, 0.99, 0.02]
+    default_initial_pose = [-6.4, 1.04, 0.0, 0.0, 0.0, 0.99, 0.02]
     initial_pose = LaunchConfiguration("initial_pose", default=str(default_initial_pose))
 
     map_dir = LaunchConfiguration(
@@ -154,8 +154,8 @@ def generate_launch_description():
                     "transform_tolerance": 0.01,
                     "min_height": -0.4,
                     "max_height": 1.5,
-                    "angle_min": 1.5708,  # -M_PI/2
-                    "angle_max": -1.5708,  # M_PI/2
+                    "angle_min": -1.5708,  # -M_PI/2
+                    "angle_max": 1.5708,  # M_PI/2
                     "angle_increment": 0.0087,  # M_PI/360.0
                     "scan_time": 0.3333,
                     "range_min": 0.05,
