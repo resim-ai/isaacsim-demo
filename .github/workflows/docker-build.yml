@@ -12,8 +12,8 @@ env:
   RESIM_CLIENT_ID: ${{ secrets.PETE_TMP_RESIM_CLIENT_ID }}
   RESIM_CLIENT_SECRET: ${{ secrets.PETE_TMP_RESIM_CLIENT_SECRET }}
   PROJECT_NAME: pete-isaac-sim-test
-  SIM_SYSTEM_ID: 08468d5e-8a43-4532-a10b-40e01d23dcc3
-  SIM_TEST_SUITE: Nav2 Demo Tests
+  SIM_SYSTEM_ID: 8bcb441d-eec2-4684-9c60-41ba958a87ef
+  SIM_TEST_SUITE: Nav Demo Tests
 
 permissions:
   id-token: write
