@@ -9,11 +9,11 @@ env:
   BUILD_REPO_NAME: isaacsim-test-images
   METRICS_BUILD_REPO_NAME: isaacsim-test-images
   REGISTRY_NAME: 909785973729.dkr.ecr.us-east-1.amazonaws.com
-  RESIM_PASSWORD: ${{ secrets.RESIM_PASSWORD }}
-  RESIM_USERNAME: ${{ secrets.RESIM_USERNAME }}
-  PROJECT_NAME: isaac-sim
-  SIM_SYSTEM_ID: 30c93c77-9c39-4ac4-bba8-cd11159d41fa
-  SIM_TEST_SUITE: Nav2-Demo-Tests
+  RESIM_CLIENT_ID: ${{ secrets.PETE_TMP_RESIM_CLIENT_ID }}
+  RESIM_CLIENT_SECRET: ${{ secrets.PETE_TMP_RESIM_CLIENT_SECRET }}
+  PROJECT_NAME: pete-isaac-sim-test
+  SIM_SYSTEM_ID: 08468d5e-8a43-4532-a10b-40e01d23dcc3
+  SIM_TEST_SUITE: Nav2 Demo Tests
 
 permissions:
   id-token: write
