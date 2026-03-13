@@ -33,6 +33,11 @@ while [ $SECONDS -lt $TIMEOUT ]; do
         # Process ended early — get its exit code
         wait $LAUNCH_PID
         EXIT_CODE=$?
+        # Shutdown() always exits 0; check the flag file written by the launch
+        # file when bt_navigator reports a goal failure.
+        if [ -f /tmp/resim/outputs/navigation_failed ]; then
+            EXIT_CODE=1
+        fi
         echo "Scenario ended early. Exit code: $EXIT_CODE"
         exit $EXIT_CODE
     fi
@@ -41,4 +46,7 @@ done
 
 echo "Timeout reached (${TIMEOUT}s), exiting."
 echo $TIMEOUT > /tmp/resim/outputs/internal_timeout
+if [ -f /tmp/resim/outputs/navigation_failed ]; then
+    exit 1
+fi
 exit 0
