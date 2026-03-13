@@ -9,7 +9,7 @@ metrics:
     query_string: |
       SELECT
         'Total time to reach final Goal' AS group_name,
-        date_format(MAX(m.build_creation_timestamp), '%h:%m %M %e') AS "Build date",
+        array_agg(m.build_name)[1] || '<br>' || date_format(MAX(m.build_creation_timestamp), '%h:%i %M %e') AS "Build",
         SUM(CASE WHEN per_job.goal_count != 3 THEN 75 ELSE per_job.total_time END) AS "Time (s)"
       FROM (
         SELECT t.job_id,
