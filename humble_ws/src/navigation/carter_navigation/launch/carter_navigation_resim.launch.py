@@ -43,7 +43,7 @@ def generate_launch_description():
     use_sim_time = LaunchConfiguration("use_sim_time", default="True")
     
     # Default initial pose for the robot
-    default_initial_pose = [-6.4, -1.04, 0.0, 0.0, 0.0, 0.99, 0.02]
+    default_initial_pose = [-6.4, 1.04, 0.0, 0.0, 0.0, 0.99, 0.02]
     initial_pose = LaunchConfiguration("initial_pose", default=str(default_initial_pose))
 
     map_dir = LaunchConfiguration(
@@ -116,6 +116,10 @@ def generate_launch_description():
             print("Condition met, launching the node.")
 
             return second_node_action
+
+    def flag_navigation_failure(event: ProcessIO) -> None:
+        if "Goal failed" in event.text.decode():
+            Path("/tmp/resim/outputs/navigation_failed").touch()
         
     nav2_stack = [
         IncludeLaunchDescription(
@@ -186,6 +190,13 @@ def generate_launch_description():
                     TimerAction(period=5.0, actions=[Shutdown(reason="All goals completed.")]),
                     "All goals reached.",
                 )
+            ),
+            condition=IfCondition(LaunchConfiguration("send_goals")),
+        ),
+        # Write a flag file if any navigation goal fails so entrypoint.sh can exit non-zero
+        RegisterEventHandler(
+            OnProcessIO(
+                on_stderr=lambda event: flag_navigation_failure(event),
             ),
             condition=IfCondition(LaunchConfiguration("send_goals")),
         )
