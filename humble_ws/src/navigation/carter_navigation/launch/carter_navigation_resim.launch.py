@@ -37,11 +37,11 @@ def get_experience_location() -> str:
             return test_config["experienceLocation"]
     else:
         return os.path.join(get_package_share_directory("isaac_ros_navigation_goal"), "assets", "goals.txt")
-    
+
 
 def generate_launch_description():
     use_sim_time = LaunchConfiguration("use_sim_time", default="True")
-    
+
     # Default initial pose for the robot
     default_initial_pose = [-6.4, -1.04, 0.0, 0.0, 0.0, 0.99, 0.02]
     initial_pose = LaunchConfiguration("initial_pose", default=str(default_initial_pose))
@@ -116,7 +116,11 @@ def generate_launch_description():
             print("Condition met, launching the node.")
 
             return second_node_action
-        
+
+    def flag_navigation_failure(event: ProcessIO) -> None:
+        if "Goal failed" in event.text.decode():
+            Path("/tmp/resim/outputs/navigation_failed").touch()
+
     nav2_stack = [
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(os.path.join(nav2_bringup_launch_dir, "rviz_launch.py")),
@@ -132,7 +136,7 @@ def generate_launch_description():
                 "use_sim_time": use_sim_time,
                 "params_file": param_dir,
             }.items(),
-        ),        
+        ),
         Node(
             name="image_throttler",
             package="topic_tools",
@@ -188,6 +192,12 @@ def generate_launch_description():
                 )
             ),
             condition=IfCondition(LaunchConfiguration("send_goals")),
+        ),
+        RegisterEventHandler(
+            OnProcessIO(
+                on_stderr=lambda event: flag_navigation_failure(event),
+            ),
+            condition=IfCondition(LaunchConfiguration("send_goals")),
         )
     ]
     checklist_node = Node(
@@ -195,7 +205,7 @@ def generate_launch_description():
         executable='checklist',
         name='checklist_node',
     )
-    
+
     obstacle_generator_node = Node(
         package='obstacle_generator',
         executable='obstacle_generator',
@@ -209,28 +219,27 @@ def generate_launch_description():
         ],
         output="screen",
     )
-    
+
     # obstacle_generator_handler = RegisterEventHandler(
     #     OnProcessExit(
     #         target_action=checklist_node,
     #         on_exit=[obstacle_generator_node],
     #     )
     # )
-    
+
     nav2_stack_handler = RegisterEventHandler(
         OnProcessExit(
             target_action=checklist_node,
             on_exit=nav2_stack,
         )
     )
-    
+
     return LaunchDescription([
         DeclareLaunchArgument("rviz", default_value="false", description="Launch RViz if true"),
         DeclareLaunchArgument("send_goals", default_value="true", description="Send goals if true"),
-        DeclareLaunchArgument("initial_pose", default_value=str(default_initial_pose), 
+        DeclareLaunchArgument("initial_pose", default_value=str(default_initial_pose),
                             description="Initial pose of the robot [x, y, z, qx, qy, qz, qw]"),
         checklist_node,
         # obstacle_generator_handler,
         nav2_stack_handler,
     ])
-
