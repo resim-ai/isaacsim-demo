@@ -13,6 +13,9 @@ fi
 
 exec $ISAACSIM_COMMAND --exec '/scripts/open_isaacsim_stage.py --path https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/5.1/Isaac/Samples/ROS2/Scenario/carter_warehouse_navigation.usd --start-on-play' \
   --enable isaacsim.ros2.sim_control \
+  --enable isaacsim.replicator.agent.core \
+  --enable omni.anim.graph.core \
+  --/app/scripting/ignoreWarningDialog=true \
   --/isaac/startup/ros_bridge_extension=isaacsim.ros2.bridge \
   --/renderer/shadercache/driverDiskCache/enabled=true \
   --/rtx/shaderDb/driverAppShaderCachePath=/isaac-sim/shadercache \
