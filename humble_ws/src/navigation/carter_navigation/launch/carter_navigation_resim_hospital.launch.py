@@ -44,7 +44,7 @@ def generate_launch_description():
     
     # Default initial pose for the robot
     # [x, y, z, qx, qy, qz, qw]
-    default_initial_pose = [15.82728, 5.87701, 0.0, 0.0, 0.0, 0.0, 1.0]
+    default_initial_pose = [11.5, 6.0, 0.0, 0.0, 0.0, 0.0, 1.0]
     initial_pose = LaunchConfiguration("initial_pose", default=str(default_initial_pose))
 
     map_dir = LaunchConfiguration(

@@ -43,8 +43,8 @@ amcl:
     always_reset_initial_pose: false
     first_map_only: false
     initial_pose:
-      x: 15.82728
-      y: 5.87701
+      x: 11.5
+      y: 6.0
       z: 0.0
       yaw: 0.0
 
@@ -277,7 +277,7 @@ local_costmap:
       resolution: 0.05
       transform_tolerance: 0.3
       footprint: "[ [0.14, 0.25], [0.14, -0.25], [-0.607, -0.25], [-0.607, 0.25] ]"
-      plugins: ["hesai_voxel_layer", "front_rplidar_obstacle_layer", "back_rplidar_obstacle_layer", "inflation_layer"]
+      plugins: ["hesai_voxel_layer", "inflation_layer"]
       # plugins: ["hesai_voxel_layer", "inflation_layer"]
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
@@ -290,6 +290,7 @@ local_costmap:
         footprint_clearing_enabled: true
         max_obstacle_height: 2.0
         publish_voxel_map: False
+        combination_method: 1
         origin_z: 0.0
         z_voxels: 16
         z_resolution: 0.2
@@ -306,26 +307,7 @@ local_costmap:
           clearing: True
           marking: True
           data_type: "PointCloud2"
-      front_rplidar_obstacle_layer:
-        plugin: "nav2_costmap_2d::ObstacleLayer"
-        enabled: True
-        observation_sources: scan
-        scan:
-          topic: /carter1/front_2d_lidar/scan
-          max_obstacle_height: 2.0
-          clearing: True
-          marking: True
-          data_type: "LaserScan"
-      back_rplidar_obstacle_layer:
-        plugin: "nav2_costmap_2d::ObstacleLayer"
-        enabled: True
-        observation_sources: scan
-        scan:
-          topic: /carter1/back_2d_lidar/scan
-          max_obstacle_height: 2.0
-          clearing: True
-          marking: True
-          data_type: "LaserScan"
+          observation_persistence: 0.0
   local_costmap_client:
     ros__parameters:
       use_sim_time: True
@@ -355,6 +337,7 @@ global_costmap:
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
+        combination_method: 1
         observation_sources: scan
         scan:
           topic: /carter1/scan
@@ -366,6 +349,7 @@ global_costmap:
           raytrace_min_range: 0.0
           obstacle_max_range: 10.0
           obstacle_min_range: 0.0
+          observation_persistence: 0.0
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: True
