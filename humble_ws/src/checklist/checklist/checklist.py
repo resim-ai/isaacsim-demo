@@ -65,21 +65,22 @@ class Checklist(Node):
 
     def _wait_for_services(self) -> bool:
         clients = [
+            ("LoadWorld", self.load_world_client),
             ("GetSimulationState", self.get_sim_state_client),
             ("SetSimulationState", self.set_sim_state_client),
             ("SetEntityState", self.set_entity_state_client),
-            ("LoadWorld", self.load_world_client),
         ]
         for service_name, client in clients:
             self.get_logger().info(f"Waiting for /isaacsim/{service_name} service...")
             if not client.wait_for_service(timeout_sec=30.0):
                 self.get_logger().error(f"/isaacsim/{service_name} service not available")
                 return False
+        self.get_logger().info("All services available.")
         return True
 
     def _wait_until_stopped_or_paused(self) -> bool:
         # Simulator may come up playing or still initializing; wait until stable.
-        max_attempts = 60
+        max_attempts = 30
         for _ in range(max_attempts):
             state = self._get_simulation_state()
             if state is None:
@@ -99,14 +100,17 @@ class Checklist(Node):
             if state.state == SimulationState.STATE_QUITTING:
                 self.get_logger().error("Isaac Sim is quitting; cannot continue checklist.")
                 return False
+            
+            self.get_logger().info(f"Isaac Sim state: {state}")
 
         self.get_logger().error("Timed out waiting for Isaac Sim to reach STOPPED/PAUSED.")
         return False
 
     def _get_simulation_state(self):
         request = GetSimulationState.Request()
+        self.get_logger().info("Getting Isaac Sim state...")
         future = self.get_sim_state_client.call_async(request)
-        rclpy.spin_until_future_complete(self, future)
+        rclpy.spin_until_future_complete(self, future, timeout_sec=10.0)
         response = future.result()
         if response is None:
             return None
