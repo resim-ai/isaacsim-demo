@@ -5,6 +5,7 @@ set -ex -o pipefail
 export ROS_DISTRO=humble
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/isaac-sim/exts/isaacsim.ros2.bridge/$ROS_DISTRO/lib"
 export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+export FASTRTPS_DEFAULT_PROFILES_FILE="/fastdds.xml"
 
 export ISAACSIM_COMMAND="/isaac-sim/isaac-sim.streaming.sh"
 if [[ -n "$GUI" ]]; then

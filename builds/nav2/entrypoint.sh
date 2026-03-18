@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+export FASTRTPS_DEFAULT_PROFILES_FILE="/humble_ws/fastdds.xml"
+
 source /opt/ros/humble/setup.bash
 source /humble_ws/install/setup.bash
 source /humble_ws/venv/bin/activate

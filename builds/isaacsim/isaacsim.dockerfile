@@ -3,5 +3,6 @@ FROM public.ecr.aws/resim/isaac-sim-resim-shaders:5.1.0
 # Setup entrypoint and deps
 COPY builds/isaacsim/entrypoint.sh /
 COPY humble_ws/src/isaacsim/scripts/open_isaacsim_stage.py /scripts/
+COPY humble_ws/fastdds.xml /
 
 ENTRYPOINT ["/entrypoint.sh"]
