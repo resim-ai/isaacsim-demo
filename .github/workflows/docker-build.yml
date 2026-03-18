@@ -13,7 +13,7 @@ env:
   RESIM_PASSWORD: ${{ secrets.RESIM_STAGING_PASSWORD }}
   PROJECT_NAME: isaac-sim
   SIM_SYSTEM_ID: 30c93c77-9c39-4ac4-bba8-cd11159d41fa
-  SIM_TEST_SUITE: Nav2 Demo Tests
+  SIM_TEST_SUITE: Hospital Demo Tests
   # SIM_TEST_SUITE: Nav2 Smoke
   # For metrics 2.0
   RESIM_URL: https://api.resim.io/v1
@@ -284,7 +284,8 @@ jobs:
           export NAV2_IMAGE=${{ needs.create-new-nav2-mcb-build.outputs.image_tag }}
           ./resim-cli builds create --build-spec ./builds/docker-compose.yml --use-os-env \
             --system $SIM_STAGING_SYSTEM_ID --name "Isaac Sim Build" --description "A build of the Isaac Sim system" \
-            --version "${{ env.COMMIT_SHA }}" --branch "${{ env.BRANCH_NAME }}" --auto-create-branch --github >> $GITHUB_OUTPUT
+            --version "${{ env.COMMIT_SHA }}" --branch "${{ env.BRANCH_NAME }}" --auto-create-branch --github \
+            --assets "collected_hospital_demo:1" >> $GITHUB_OUTPUT
 
       - name: Add metrics set to build
         run: |

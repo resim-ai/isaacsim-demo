@@ -181,7 +181,7 @@ class TransformManager:
         """
         logger.info("Collecting transforms...")
 
-        for topic, msg, _ in read_messages(str(input_bag), ["/tf", "/tf_static"]):
+        for topic, msg, _ in read_messages(str(input_bag), ["/carter1/tf", "/carter1/tf_static"]):
             assert isinstance(msg, TFMessage)
             for transform in msg.transforms:
                 # Only collect transforms between odom and map frames
@@ -200,9 +200,9 @@ class TransformManager:
                     transform.header.stamp.sec = 0
                     transform.header.stamp.nanosec = 0
 
-                if topic == "/tf":
+                if topic == "/carter1/tf":
                     self.tf_buffer.set_transform(transform, "default_authority")
-                elif topic == "/tf_static":
+                elif topic == "/carter1/tf_static":
                     self.tf_buffer.set_transform_static(transform, "default_authority")
 
     def transform_pose(
@@ -247,11 +247,11 @@ def add_distance_to_goal_metric(
     logger.info("Calculating distances to goal...")
 
     for topic, msg, timestamp in read_messages(
-        str(input_bag), ["/chassis/odom", "/goal"]
+        str(input_bag), ["/carter1/chassis/odom", "/carter1/goal"]
     ):
-        if topic == "/chassis/odom":
+        if topic == "/carter1/chassis/odom":
             current_odom = msg
-        elif topic == "/goal":
+        elif topic == "/carter1/goal":
             current_goal = msg
             # If we have data for the previous goal, save it
             if current_distances:
@@ -369,7 +369,7 @@ def add_camera_gif_metric(
     emitter: Emitter,
     input_bag: Path,
     output_path: Path,
-    topic: str = "/front_stereo_camera/left/image_raw_throttled",
+    topic: str = "/carter1/front_stereo_camera/left/image_raw_throttled",
 ):
     """Create a GIF from camera images in an MCAP file, starting after the first goal.
 
@@ -381,7 +381,7 @@ def add_camera_gif_metric(
     """
     # First, find the timestamp of the first goal
     first_goal_time = None
-    for _, msg, timestamp in read_messages(str(input_bag), ["/goal"]):
+    for _, msg, timestamp in read_messages(str(input_bag), ["/carter1/goal"]):
         first_goal_time = timestamp
         break
 
@@ -490,9 +490,9 @@ def add_robot_trajectory_metric(
     logger.info("Calculating robot trajectory...")
 
     for topic, msg, timestamp in read_messages(
-        str(input_bag), ["/chassis/odom", "/goal"]
+        str(input_bag), ["/carter1/chassis/odom", "/carter1/goal"]
     ):
-        if topic == "/chassis/odom":
+        if topic == "/carter1/chassis/odom":
             assert isinstance(msg, Odometry)
             try:
                 # Transform pose from odom to map frame
@@ -515,7 +515,7 @@ def add_robot_trajectory_metric(
             except Exception as e:
                 logger.warning("Could not transform pose", exc_info=e)
                 continue
-        elif topic == "/goal":
+        elif topic == "/carter1/goal":
             assert isinstance(msg, PoseStamped)
             goal_x.append(msg.pose.position.x)
             goal_y.append(msg.pose.position.y)
@@ -609,7 +609,7 @@ def add_robot_trajectory_metric(
 
 def add_time_to_goal_metric(writer: ResimMetricsWriter, input_bag: Path):
     first_goal_timestamp: float = math.inf
-    end_timestamp: float = 0.0
+    end_timestamp: float | None = None
 
     TIMEOUT_PATH = Path("/tmp/resim/inputs/logs/internal_timeout")
     maybe_timeout = None
@@ -619,21 +619,35 @@ def add_time_to_goal_metric(writer: ResimMetricsWriter, input_bag: Path):
 
     msg: GoalStatus
     for _, msg, timestamp in read_messages(
-        str(input_bag), ["/goal/status"]
+        str(input_bag), ["/carter1/goal/status"]
     ):
         if msg.status == "NEW_GOAL":
             first_goal_timestamp = min(first_goal_timestamp, timestamp)
         elif msg.status == "COMPLETE":
-            assert end_timestamp == 0.0, "/goal/status COMPLETE message seen more than once."
             end_timestamp = timestamp
-    
-    end_timestamp = (end_timestamp - first_goal_timestamp) / 1e9
+
+    if first_goal_timestamp == math.inf:
+        logger.warning("No NEW_GOAL status messages found")
+        return
+
+    goal_reached = end_timestamp is not None and end_timestamp >= first_goal_timestamp
+    if goal_reached:
+        elapsed_seconds = (end_timestamp - first_goal_timestamp) / 1e9
+    else:
+        elapsed_seconds = 0.0
+
+    metric_status = MetricStatus.PASSED_METRIC_STATUS if goal_reached else MetricStatus.FAIL_BLOCK_METRIC_STATUS
+    metric_value = elapsed_seconds
+    if maybe_timeout is not None:
+        metric_status = MetricStatus.FAIL_BLOCK_METRIC_STATUS
+        metric_value = float(maybe_timeout)
+
     (
         writer.add_scalar_metric("Time to reach final goal")
         .with_description("Time between receiving first goal and reaching final goal. Fails if final goal not reached before timeout.")
-        .with_status(MetricStatus.PASSED_METRIC_STATUS if maybe_timeout is None else MetricStatus.FAIL_BLOCK_METRIC_STATUS)
+        .with_status(metric_status)
         .with_importance(MetricImportance.MEDIUM_IMPORTANCE)
-        .with_value(end_timestamp if maybe_timeout is None else maybe_timeout)
+        .with_value(metric_value)
         .with_unit("seconds")
     )
         
@@ -678,11 +692,11 @@ def add_pose_difference_metric(
 
     # Single pass: messages are sorted by time
     for topic, msg, timestamp in read_messages(
-        str(input_bag), ["/chassis/odom", "/amcl_pose"]
+        str(input_bag), ["/carter1/chassis/odom", "/carter1/amcl_pose"]
     ):
-        if topic == "/chassis/odom":
+        if topic == "/carter1/chassis/odom":
             latest_odom = msg
-        elif topic == "/amcl_pose":
+        elif topic == "/carter1/amcl_pose":
             if latest_odom is not None:
                 amcl_pos = msg.pose.pose.position
                 # Transform odom pose to map frame at this timestamp
@@ -766,7 +780,7 @@ def emit_velocity_data(emitter: Emitter, input_bag: Path):
 
     # Create a dictionary mapping topic names to their types
     topic_type_map = {topic.name: topic.type for topic in reader.get_all_topics_and_types()}
-    odom_topic = "/chassis/odom"
+    odom_topic = "/carter1/chassis/odom"
     
     if odom_topic not in topic_type_map:
         raise ValueError(f"topic {odom_topic} not in bag")

@@ -18,6 +18,7 @@ from rclpy.action import ActionClient
 from rclpy.duration import Duration
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPolicy
+from action_msgs.msg import GoalStatus as ActionGoalStatus
 from nav2_msgs.action import NavigateToPose
 from std_msgs.msg import Header
 from .obstacle_map import GridMap
@@ -32,26 +33,22 @@ class SetNavigationGoal(Node):
     def __init__(self):
         super().__init__("set_navigation_goal")
 
-        self.declare_parameters(
-            namespace="",
-            parameters=[
-                ("iteration_count", 1),
-                ("goal_generator_type", "RandomGoalGenerator"),
-                ("action_server_name", "navigate_to_pose"),
-                ("obstacle_search_distance_in_meters", 0.2),
-                ("frame_id", "map"),
-                ("map_yaml_path", rclpy.Parameter.Type.STRING),
-                ("goal_text_file_path", rclpy.Parameter.Type.STRING),
-                ("initial_pose", rclpy.Parameter.Type.DOUBLE_ARRAY),
-                ("max_goal_send_retries", 3),
-                ("initial_pose_settle_sec", 0.5),
-                ("server_wait_timeout_sec", 60.0),
-            ],
-        )
+        self.declare_parameter("iteration_count", 1)
+        self.declare_parameter("goal_generator_type", "RandomGoalGenerator")
+        self.declare_parameter("action_server_name", "navigate_to_pose")
+        self.declare_parameter("obstacle_search_distance_in_meters", 0.2)
+        self.declare_parameter("frame_id", "map")
+        self.declare_parameter("map_yaml_path", "")
+        self.declare_parameter("goal_text_file_path", "")
+        self.declare_parameter("initial_pose", [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0])
+        self.declare_parameter("publish_initial_pose", True)
+        self.declare_parameter("max_goal_send_retries", 3)
+        self.declare_parameter("initial_pose_settle_sec", 0.5)
+        self.declare_parameter("server_wait_timeout_sec", 60.0)
 
         self.__goal_generator = self.__create_goal_generator()
         action_server_name = self.get_parameter("action_server_name").value
-        self._action_client = ActionClient(self, NavigateToPose, action_server_name)
+        self._action_client = ActionClient(self, NavigateToPose, f"{self.get_namespace()}/{action_server_name}")
 
         self.MAX_ITERATION_COUNT = int(self.get_parameter("iteration_count").value)
         assert self.MAX_ITERATION_COUNT > 0
@@ -63,14 +60,16 @@ class SetNavigationGoal(Node):
             history=HistoryPolicy.KEEP_LAST,
             depth=10,
         )
-        self.__initial_goal_publisher = self.create_publisher(PoseWithCovarianceStamped, "/initialpose", 5)
-        self.__goal_publisher = self.create_publisher(PoseStamped, "/goal", goal_qos)
-        self.__goal_status_publisher = self.create_publisher(GoalStatus, "/goal/status", goal_qos)
+        self.__initial_goal_publisher = self.create_publisher(PoseWithCovarianceStamped, "initialpose", 5)
+        self.__goal_publisher = self.create_publisher(PoseStamped, "goal", goal_qos)
+        self.__goal_status_publisher = self.create_publisher(GoalStatus, "goal/status", goal_qos)
 
         self.__initial_pose = self.get_parameter("initial_pose").value
-        self.__is_initial_pose_sent = True if self.__initial_pose is None else False
+        self.__publish_initial_pose = bool(self.get_parameter("publish_initial_pose").value)
+        self.__is_initial_pose_sent = (not self.__publish_initial_pose) or (self.__initial_pose is None)
         self._goal_send_retries = 0
         self._current_goal_msg = None
+        self._retry_timer = None
 
     def __send_initial_pose(self):
         """
@@ -84,10 +83,10 @@ class SetNavigationGoal(Node):
         goal.pose.pose.position.x = self.__initial_pose[0]
         goal.pose.pose.position.y = self.__initial_pose[1]
         goal.pose.pose.position.z = self.__initial_pose[2]
-        goal.pose.pose.orientation.x = self.__initial_pose[3]
-        goal.pose.pose.orientation.y = self.__initial_pose[4]
-        goal.pose.pose.orientation.z = self.__initial_pose[5]
-        goal.pose.pose.orientation.w = self.__initial_pose[6]
+        goal.pose.pose.orientation.w = self.__initial_pose[3]
+        goal.pose.pose.orientation.x = self.__initial_pose[4]
+        goal.pose.pose.orientation.y = self.__initial_pose[5]
+        goal.pose.pose.orientation.z = self.__initial_pose[6]
         self.__initial_goal_publisher.publish(goal)
 
     def send_goal(self):
@@ -151,7 +150,10 @@ class SetNavigationGoal(Node):
                     "Retrying in 2 s..."
                     % (self._goal_send_retries, max_retries)
                 )
-                self.create_timer(2.0, self.__retry_send_goal)
+                if self._retry_timer is not None:
+                    self._retry_timer.cancel()
+                    self.destroy_timer(self._retry_timer)
+                self._retry_timer = self.create_timer(2.0, self.__retry_send_goal)
                 return
             self.get_logger().error("Goal rejected after %d retries." % max_retries)
             rclpy.shutdown()
@@ -165,12 +167,32 @@ class SetNavigationGoal(Node):
 
     def __retry_send_goal(self):
         """Resend only the action goal after a rejection/timeout (same goal, no new iteration). Topic /goal is not republished; it is assumed reliably delivered."""
+        if self._retry_timer is not None:
+            self._retry_timer.cancel()
+            self.destroy_timer(self._retry_timer)
+            self._retry_timer = None
         if self._current_goal_msg is None:
             return
         self._send_goal_future = self._action_client.send_goal_async(
             self._current_goal_msg, feedback_callback=self.__feedback_callback
         )
         self._send_goal_future.add_done_callback(self.__goal_response_callback)
+
+    def __normalize_goal_pose(self, pose):
+        """
+        Normalize goal pose arrays to ROS pose fields.
+        Preferred format is [x, y, z, qw, qx, qy, qz]. Legacy [x, y, qx, qy, qz, qw]
+        remains supported for random/legacy text goals.
+        """
+        if len(pose) == 7:
+            return (pose[0], pose[1], pose[2], pose[4], pose[5], pose[6], pose[3])
+        if len(pose) == 6:
+            return (pose[0], pose[1], 0.0, pose[2], pose[3], pose[4], pose[5])
+        self.get_logger().error(
+            "Goal pose must contain either 7 values [x, y, z, qw, qx, qy, qz] "
+            "or legacy 6 values [x, y, qx, qy, qz, qw]"
+        )
+        return None
 
     def __get_goal(self):
         """
@@ -200,13 +222,18 @@ class SetNavigationGoal(Node):
             )
             return
 
+        normalized_pose = self.__normalize_goal_pose(pose)
+        if normalized_pose is None:
+            return None
+
         self.get_logger().info("Generated goal pose: {0}".format(pose))
-        goal_msg.pose.pose.position.x = pose[0]
-        goal_msg.pose.pose.position.y = pose[1]
-        goal_msg.pose.pose.orientation.x = pose[2]
-        goal_msg.pose.pose.orientation.y = pose[3]
-        goal_msg.pose.pose.orientation.z = pose[4]
-        goal_msg.pose.pose.orientation.w = pose[5]
+        goal_msg.pose.pose.position.x = normalized_pose[0]
+        goal_msg.pose.pose.position.y = normalized_pose[1]
+        goal_msg.pose.pose.position.z = normalized_pose[2]
+        goal_msg.pose.pose.orientation.x = normalized_pose[3]
+        goal_msg.pose.pose.orientation.y = normalized_pose[4]
+        goal_msg.pose.pose.orientation.z = normalized_pose[5]
+        goal_msg.pose.pose.orientation.w = normalized_pose[6]
         return goal_msg
 
     def __get_result_callback(self, future):
@@ -214,9 +241,17 @@ class SetNavigationGoal(Node):
         Callback to check result.\n
         It calls the send_goal() function in case current goal sent count < required goals count.     
         """
-        # Nav2 is sending empty message for success as well as for failure.
-        result = future.result().result
-        self.get_logger().info("Result: {0}".format(result.result))
+        goal_result = future.result()
+        status = goal_result.status
+        result = goal_result.result
+        self.get_logger().info("Result status: %d, payload: %s" % (status, result.result))
+
+        if status != ActionGoalStatus.STATUS_SUCCEEDED:
+            self.get_logger().error(
+                "Goal did not succeed (status=%d). Not counting this as reached." % status
+            )
+            rclpy.shutdown()
+            sys.exit(1)
 
         if self.curr_iteration_count < self.MAX_ITERATION_COUNT:
             self.curr_iteration_count += 1
@@ -272,7 +307,7 @@ def main(args=None):
     thread = threading.Thread(target=rclpy.spin, args=(set_goal, ), daemon=True)
     thread.start()
 
-    result = set_goal.send_goal()
+    set_goal.send_goal()
     
     thread.join()
     set_goal.destroy_node()

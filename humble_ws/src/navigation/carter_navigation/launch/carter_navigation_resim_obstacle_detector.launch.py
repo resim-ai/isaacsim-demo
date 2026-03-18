@@ -43,7 +43,7 @@ def generate_launch_description():
     use_sim_time = LaunchConfiguration("use_sim_time", default="True")
     
     # Default initial pose for the robot
-    default_initial_pose = [-6.4, -1.04, 0.0, 0.0, 0.0, 0.99, 0.02]
+    default_initial_pose = [-6.4, -1.04, 0.0, 0.02, 0.0, 0.0, 0.99]
     initial_pose = LaunchConfiguration("initial_pose", default=str(default_initial_pose))
 
     map_dir = LaunchConfiguration(
@@ -238,7 +238,7 @@ def generate_launch_description():
         DeclareLaunchArgument("rviz", default_value="false", description="Launch RViz if true"),
         DeclareLaunchArgument("send_goals", default_value="true", description="Send goals if true"),
         DeclareLaunchArgument("initial_pose", default_value=str(default_initial_pose), 
-                            description="Initial pose of the robot [x, y, z, qx, qy, qz, qw]"),
+                            description="Initial pose of the robot [x, y, z, qw, qx, qy, qz]"),
         checklist_node,
         # obstacle_generator_handler,
         nav2_stack_handler,

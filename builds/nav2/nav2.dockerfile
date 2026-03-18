@@ -40,7 +40,7 @@ RUN source /opt/ros/humble/setup.bash && \
 RUN source /opt/ros/humble/setup.bash && colcon build
 
 
-COPY builds/nav2/goals /goals
+COPY builds/nav2/experiences /experiences
 COPY builds/nav2/entrypoint.sh /
 COPY /.resim/metrics/config.resim.yml ./resim_metrics_config.resim.yml
 

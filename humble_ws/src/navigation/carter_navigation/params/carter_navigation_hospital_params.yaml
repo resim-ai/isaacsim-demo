@@ -39,15 +39,9 @@ amcl:
     z_short: 0.05
     scan_topic: scan
     map_topic: map
-    set_initial_pose: true
+    set_initial_pose: false
     always_reset_initial_pose: false
     first_map_only: false
-    initial_pose:
-      x: 11.5
-      y: 6.0
-      z: 0.0
-      yaw: 0.0
-
 amcl_map_client:
   ros__parameters:
     use_sim_time: True
@@ -124,12 +118,12 @@ velocity_smoother:
     smoothing_frequency: 20.0 
     scale_velocities: true 
     feedback: "OPEN_LOOP" 
-    max_velocity: [1.5, 0.0, 0.5]
-    min_velocity: [-1.5, 0.0, -0.5]
+    max_velocity: [1.0, 0.0, 0.5]
+    min_velocity: [-1.0, 0.0, -0.5]
     # deadband_velocity: [0.0, 0.0, 0.0] 
     velocity_timeout: 1.0 
-    max_accel: [1.0, 0.0, 1.0]
-    max_decel: [-1.0, 0.0, -1.0]
+    max_accel: [0.75, 0.0, 1.0]
+    max_decel: [-0.75, 0.0, -1.0]
     odom_topic: "chassis/odom" 
     odom_duration: 0.1
     # enable_stamped_cmd_vel: true
@@ -137,7 +131,7 @@ velocity_smoother:
 controller_server:
   ros__parameters:
     use_sim_time: True
-    controller_frequency: 20.0
+    controller_frequency: 25.0
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.5
     min_theta_velocity_threshold: 0.001
@@ -161,18 +155,18 @@ controller_server:
     # DWB parameters
     FollowPath:
       plugin: "nav2_mppi_controller::MPPIController"
-      time_steps: 56
-      model_dt: 0.05
-      batch_size: 1000
+      time_steps: 28
+      model_dt: 0.04
+      batch_size: 500
       vx_std: 0.4
       vy_std: 0.0
       wz_std: 0.2
-      vx_max: 1.5
-      vx_min: -1.5
+      vx_max: 1.0
+      vx_min: -1.0
       vy_max: 0.0
       wz_max: 0.5
-      ax_max: 1.0
-      ax_min: -1.0
+      ax_max: 0.75
+      ax_min: -0.75
       ay_min: 0.0
       ay_max: 0.0
       az_max: 1.0
@@ -198,13 +192,13 @@ controller_server:
       GoalCritic:
         enabled: true
         cost_power: 1
-        cost_weight: 5.0
-        threshold_to_consider: 0.7
+        cost_weight: 6.0
+        threshold_to_consider: 1.0
       GoalAngleCritic:
         enabled: true
         cost_power: 1
-        cost_weight: 6.0
-        threshold_to_consider: 0.5
+        cost_weight: 15.0
+        threshold_to_consider: 0.3
       # ObstaclesCritic:
       #   enabled: true
       #   cost_power: 1
@@ -219,11 +213,12 @@ controller_server:
       CostCritic:
         enabled: true
         cost_power: 1
-        cost_weight: 3.81
+        cost_weight: 10.0
         critical_cost: 300.0
         consider_footprint: true
         collision_cost: 1000000.0
-        near_goal_distance: 0.7
+        near_collision_cost: 75
+        near_goal_distance: 1.0
         trajectory_point_step: 2
       PathAlignCritic:
         enabled: true
@@ -231,21 +226,21 @@ controller_server:
         cost_weight: 5.0
         max_path_occupancy_ratio: 0.05
         trajectory_point_step: 4
-        threshold_to_consider: 0.25
+        threshold_to_consider: 0.75
         offset_from_furthest: 6
         use_path_orientations: true
       PathFollowCritic:
         enabled: true
         cost_power: 1
-        cost_weight: 7.0
+        cost_weight: 7.5
         offset_from_furthest: 5
-        threshold_to_consider: 0.7
+        threshold_to_consider: 1.0
       PathAngleCritic:
         enabled: true
         cost_power: 1
-        cost_weight: 3.0
+        cost_weight: 7.5
         offset_from_furthest: 20
-        threshold_to_consider: 0.7
+        threshold_to_consider: 1.0
         max_angle_to_furthest: 0.785398
         mode: 2
       VelocityDeadbandCritic:
@@ -277,37 +272,73 @@ local_costmap:
       resolution: 0.05
       transform_tolerance: 0.3
       footprint: "[ [0.14, 0.25], [0.14, -0.25], [-0.607, -0.25], [-0.607, 0.25] ]"
-      plugins: ["hesai_voxel_layer", "inflation_layer"]
       # plugins: ["hesai_voxel_layer", "inflation_layer"]
+      plugins: ["hesai_stvl_layer", "inflation_layer"]
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: True
-        cost_scaling_factor: 5.0
+        cost_scaling_factor: 0.5
         inflation_radius: 2.0
-      hesai_voxel_layer:
-        plugin: "nav2_costmap_2d::VoxelLayer"
+      # hesai_voxel_layer:
+      #   plugin: "nav2_costmap_2d::VoxelLayer"
+      #   enabled: True
+      #   footprint_clearing_enabled: true
+      #   max_obstacle_height: 2.0
+      #   publish_voxel_map: False
+      #   combination_method: 1
+      #   origin_z: 0.0
+      #   z_voxels: 16
+      #   z_resolution: 0.2
+      #   unknown_threshold: 15
+      #   observation_sources: pointcloud
+      #   pointcloud:  # no frame set, uses frame from message
+      #     topic: /carter1/front_3d_lidar/lidar_points
+      #     max_obstacle_height: 2.0
+      #     min_obstacle_height: 0.1
+      #     obstacle_max_range: 10.0
+      #     obstacle_min_range: 0.0
+      #     raytrace_max_range: 10.0
+      #     raytrace_min_range: 0.0
+      #     clearing: True
+      #     marking: True
+      #     data_type: "PointCloud2"
+      #     observation_persistence: 0.0
+      #     mark_threshold: 0
+      hesai_stvl_layer:
+        plugin: "spatio_temporal_voxel_layer/SpatioTemporalVoxelLayer"
         enabled: True
-        footprint_clearing_enabled: true
-        max_obstacle_height: 2.0
-        publish_voxel_map: False
+        voxel_decay: 3.0           # seconds before voxels expire — tune this down for faster clearing
+        decay_model: 0             # 0 = linear decay
+        voxel_size: 0.05
+        track_unknown_space: true
+        unknown_threshold: 15
+        mark_threshold: 0
+        update_footprint_enabled: true
         combination_method: 1
         origin_z: 0.0
-        z_voxels: 16
-        z_resolution: 0.2
-        unknown_threshold: 15
+        publish_voxel_map: false
+        transform_tolerance: 0.2
+        mapping_mode: false
         observation_sources: pointcloud
-        pointcloud:  # no frame set, uses frame from message
+        pointcloud:
+          data_type: PointCloud2
           topic: /carter1/front_3d_lidar/lidar_points
-          max_obstacle_height: 2.0
+          marking: true
+          clearing: true
+          obstacle_range: 10.0
           min_obstacle_height: 0.1
-          obstacle_max_range: 10.0
-          obstacle_min_range: 0.0
-          raytrace_max_range: 10.0
-          raytrace_min_range: 0.0
-          clearing: True
-          marking: True
-          data_type: "PointCloud2"
-          observation_persistence: 0.0
+          max_obstacle_height: 2.0
+          expected_update_rate: 0.0
+          inf_is_valid: false
+          filter: "voxel"
+          voxel_min_points: 0
+          clear_after_reading: true
+          max_z: 2.0
+          min_z: 0.1
+          vertical_fov_angle: 0.54105   # adjust to your Hesai's actual vertical FOV
+          horizontal_fov_angle: 6.2832  # 360 degrees
+          decay_acceleration: 15.0
+          model_type: 0
   local_costmap_client:
     ros__parameters:
       use_sim_time: True
@@ -321,8 +352,8 @@ global_costmap:
   global_costmap:
     ros__parameters:
       footprint_padding: 0.1
-      update_frequency: 1.0
-      publish_frequency: 1.0
+      update_frequency: 5.0
+      publish_frequency: 5.0
       global_frame: map
       robot_base_frame: base_link
       use_sim_time: True
@@ -349,14 +380,13 @@ global_costmap:
           raytrace_min_range: 0.0
           obstacle_max_range: 10.0
           obstacle_min_range: 0.0
-          observation_persistence: 0.0
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: True
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: True
-        cost_scaling_factor: 5.0
+        cost_scaling_factor: 1.0
         inflation_radius: 2.0
       always_send_full_costmap: True
   global_costmap_client:
@@ -381,7 +411,7 @@ map_saver:
 
 planner_server:
   ros__parameters:
-    expected_planner_frequency: 20.0
+    expected_planner_frequency: 10.0
     use_sim_time: True
     planner_plugins: ["SmacPlannerLattice"]
     SmacPlannerLattice:
@@ -389,16 +419,16 @@ planner_server:
       lattice_filepath: "$(find-pkg-share isaac_ros_navigation_goal)/assets/control_set_diff_0.08m.json"
       allow_unknown: true                 # Allow traveling in unknown space
       tolerance: 0.25                     # dist-to-goal heuristic cost (distance) for valid tolerance endpoints if exact goal cannot be found.
-      max_iterations: 1000000             # Maximum total iterations to search for before failing (in case unreachable), set to -1 to disable
+      max_iterations: 500000              # Maximum total iterations to search for before failing (in case unreachable), set to -1 to disable
       max_on_approach_iterations: 1000    # Maximum number of iterations after within tolerances to continue to try to find exact solution
       max_planning_time: 5.0              # Max time in s for planner to plan, smooth
       analytic_expansion_ratio: 3.5       # The ratio to attempt analytic expansions during search for final approach.
       analytic_expansion_max_length: 3.0  # For Hybrid/Lattice nodes: The maximum length of the analytic expansion to be considered valid to prevent unsafe shortcutting
-      reverse_penalty: 1.0                # Penalty to apply if motion is reversing, must be => 1
+      reverse_penalty: 2.0                # Penalty to apply if motion is reversing, must be => 1
       change_penalty: 0.2                # Penalty to apply if motion is changing directions (L to R), must be >= 0
       non_straight_penalty: 1.05          # Penalty to apply if motion is non-straight, must be => 1
-      cost_penalty: 2.0                   # Penalty to apply to higher cost areas when adding into the obstacle map dynamic programming distance expansion heuristic. This drives the robot more towards the center of passages. A value between 1.3 - 3.5 is reasonable.
-      rotation_penalty: 0.0                 # Penalty to apply to in-place rotations, if minimum control set contains them
+      cost_penalty: 6.0                   # Penalty to apply to higher cost areas when adding into the obstacle map dynamic programming distance expansion heuristic. This drives the robot more towards the center of passages. A value between 1.3 - 3.5 is reasonable.
+      rotation_penalty: 1.0                 # Penalty to apply to in-place rotations, if minimum control set contains them
       retrospective_penalty: 0.015
       lookup_table_size: 20.0             # Size of the dubin/reeds-sheep distance window to cache, in meters.
       cache_obstacle_heuristic: false     # Cache the obstacle map dynamic programming distance expansion heuristic between subsiquent replannings of the same goal location. Dramatically speeds up replanning performance (40x) if costmap is largely static.

@@ -14,6 +14,9 @@
 # limitations under the License.
 
 from .goal_generator import GoalGenerator
+from pathlib import Path
+
+import yaml
 
 
 class GoalReader(GoalGenerator):
@@ -28,5 +31,27 @@ class GoalReader(GoalGenerator):
             return
 
     def __get_goal(self):
-        for row in open(self.__file_path, "r"):
-            yield list(map(float, row.strip().split(" ")))
+        path = Path(self.__file_path)
+        suffix = path.suffix.lower()
+        if suffix in (".yaml", ".yml"):
+            with path.open("r", encoding="utf-8") as f:
+                config = yaml.safe_load(f) or {}
+            if not isinstance(config, dict):
+                raise ValueError(f"Experience file must contain a YAML mapping: {path}")
+            goals = config.get("goals")
+            if not isinstance(goals, list) or len(goals) == 0:
+                raise ValueError(f"Experience file must include a non-empty 'goals' list: {path}")
+            for idx, goal in enumerate(goals):
+                if not isinstance(goal, list) or len(goal) != 7:
+                    raise ValueError(
+                        f"Goal at index {idx} must contain exactly 7 values [x, y, z, qw, qx, qy, qz]"
+                    )
+                yield [float(v) for v in goal]
+            return
+
+        with path.open("r", encoding="utf-8") as f:
+            for row in f:
+                stripped = row.strip()
+                if not stripped:
+                    continue
+                yield list(map(float, stripped.split()))

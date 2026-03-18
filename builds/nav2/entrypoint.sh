@@ -5,7 +5,7 @@ source /opt/ros/humble/setup.bash
 source /humble_ws/install/setup.bash
 source /humble_ws/venv/bin/activate
 
-setsid ros2 launch carter_navigation carter_navigation_resim_warehouse.launch.py "$@" &
+setsid ros2 launch carter_navigation carter_navigation_resim_hospital.launch.py "$@" &
 LAUNCH_PID=$!
 
 cleanup() {

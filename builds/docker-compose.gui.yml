@@ -11,6 +11,7 @@ services:
     volumes:
       - shadercache:/isaac-sim/shadercache
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - /home/mitt/Desktop/hospital_demo/collected_hospital_demo:/tmp/resim/assets/collected_hospital_demo
   nav2:
     image: resim-humble-nav2
     extends:

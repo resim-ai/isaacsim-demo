@@ -1,0 +1,5 @@
+initial_pose: [11.5, 6.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+isaacsim_entity: "/World/Nova_Carter_ROS_1"
+goals:
+  - [-34.0, 13.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+world_uri: "/home/mitt/Desktop/hospital_demo/collected_hospital_demo/hospital_demo_one_robot_ped_bright.usda"

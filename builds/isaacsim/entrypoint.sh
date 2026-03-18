@@ -11,7 +11,7 @@ if [[ -n "$GUI" ]]; then
   export ISAACSIM_COMMAND="/isaac-sim/isaac-sim.sh"
 fi
 
-exec $ISAACSIM_COMMAND --exec '/scripts/open_isaacsim_stage.py --path https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/5.1/Isaac/Samples/ROS2/Scenario/carter_warehouse_navigation.usd --start-on-play' \
+exec $ISAACSIM_COMMAND \
   --enable isaacsim.ros2.sim_control \
   --enable isaacsim.replicator.agent.core \
   --enable omni.anim.graph.core \

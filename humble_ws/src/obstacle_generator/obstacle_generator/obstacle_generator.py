@@ -10,6 +10,8 @@ from rclpy.task import Future
 import numpy as np
 import math
 import re
+from pathlib import Path
+import yaml
 from geometry_msgs.msg import PoseStamped, Quaternion, Pose, Twist, Accel
 from std_msgs.msg import Header
 from simulation_interfaces.srv import SpawnEntity, GetEntities, SetEntityState
@@ -28,7 +30,7 @@ class ObstacleGenerator(Node):
         self.declare_parameter("goal_text_file_path", "")
         self.declare_parameter("seed", -1)
         self.declare_parameter("num_obstacles", 20)
-        self.declare_parameter("initial_pose", [-6.4, -1.04, 0.0, 0.0, 0.0, 0.99, 0.02])
+        self.declare_parameter("initial_pose", [-6.4, -1.04, 0.0, 0.02, 0.0, 0.0, 0.99])
         
         map_yaml_path = self.get_parameter("map_yaml_path").value
         goal_text_file_path = self.get_parameter("goal_text_file_path").value
@@ -102,10 +104,25 @@ class ObstacleGenerator(Node):
             future.set_result(False)
     
     def _load_goals(self, file_path):
-        """Load goals from text file."""
+        """Load goals from experience YAML (preferred) or legacy text file."""
         goals = []
+        path = Path(file_path)
         try:
-            with open(file_path, "r") as f:
+            if path.suffix.lower() in (".yaml", ".yml"):
+                with path.open("r", encoding="utf-8") as f:
+                    config = yaml.safe_load(f) or {}
+                if not isinstance(config, dict):
+                    raise ValueError(f"Experience file must contain a YAML mapping: {path}")
+                yaml_goals = config.get("goals")
+                if not isinstance(yaml_goals, list) or len(yaml_goals) == 0:
+                    raise ValueError(f"Experience file must include a non-empty 'goals' list: {path}")
+                for idx, goal in enumerate(yaml_goals):
+                    if not isinstance(goal, list) or len(goal) < 2:
+                        raise ValueError(f"Goal at index {idx} must include at least x and y")
+                    goals.append((float(goal[0]), float(goal[1])))
+                return goals
+
+            with path.open("r", encoding="utf-8") as f:
                 for line in f:
                     line = line.strip()
                     if line:

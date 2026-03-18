@@ -13,39 +13,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 import os
-from pathlib import Path
 from typing import Optional
 
 from ament_index_python.packages import get_package_share_directory
+from isaac_ros_navigation_goal.experience_config import load_experience_config  # pyright: ignore[reportMissingImports]
 from launch import LaunchDescription, LaunchDescriptionEntity
 from launch.actions import TimerAction, IncludeLaunchDescription, DeclareLaunchArgument
 from launch.conditions import IfCondition
+from launch.launch_context import LaunchContext
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch.actions import RegisterEventHandler, ExecuteProcess, Shutdown
 from launch.event_handlers import OnProcessIO, OnProcessExit
-from launch.events.process import ProcessIO
-
-def get_experience_location() -> str:
-    test_config_path = Path("/tmp/resim/test_config.json")
-    if test_config_path.exists():
-        with open(test_config_path, "r") as f:
-            test_config = json.load(f)
-            return test_config["experienceLocation"]
-    else:
-        return os.path.join(get_package_share_directory("isaac_ros_navigation_goal"), "assets", "goals.txt")
-    
+from launch.events.process import ProcessIO, ProcessExited
 
 def generate_launch_description():
     use_sim_time = LaunchConfiguration("use_sim_time", default="True")
     
     # Default initial pose for the robot
-    # [x, y, z, qx, qy, qz, qw]
-    default_initial_pose = [11.5, 6.0, 0.0, 0.0, 0.0, 0.0, 1.0]
-    initial_pose = LaunchConfiguration("initial_pose", default=str(default_initial_pose))
+    # [x, y, z, qw, qx, qy, qz]
+    default_initial_pose = [11.5, 6.0, 0.0, 1.0, 0.0, 0.0, 0.0]
+    experience_config = load_experience_config(default_initial_pose=default_initial_pose)
+    initial_pose = LaunchConfiguration("initial_pose", default=str(experience_config["initial_pose"]))
+    isaacsim_entity = LaunchConfiguration("isaacsim_entity", default=experience_config["isaacsim_entity"])
+    world_uri = LaunchConfiguration("world_uri", default=experience_config["world_uri"])
+    goal_text_file_path = LaunchConfiguration(
+        "goal_text_file_path",
+        default=experience_config["goals_path"],
+    )
 
     map_dir = LaunchConfiguration(
         "map",
@@ -100,13 +97,15 @@ def generate_launch_description():
         ),
         launch_arguments={
             "use_sim_time": use_sim_time,
-            "goal_text_file_path": get_experience_location(),
+            "goal_text_file_path": goal_text_file_path,
             "initial_pose": initial_pose,
+            "publish_initial_pose": "false",
+            "namespace": "carter1",
         }.items(),
     )
 
     ld_record_and_start = LaunchDescription(
-        [record_node, TimerAction(period=10.0, actions=[ld_automatic_goal])]
+        [record_node, TimerAction(period=1.0, actions=[ld_automatic_goal])]
     )
 
     def execute_second_node_if_condition_met(event: ProcessIO, second_node_action: LaunchDescriptionEntity, message: str) -> Optional[LaunchDescriptionEntity]:
@@ -117,7 +116,37 @@ def generate_launch_description():
             print("Condition met, launching the node.")
 
             return second_node_action
-        
+
+    def start_playing_after_initialpose(event: ProcessExited, context: LaunchContext):
+        del context
+        if event.returncode == 0:
+            return [set_simulation_playing_node]
+        return [Shutdown(reason="PublishInitialPose failed; not starting simulation playback.")]
+
+    publish_initial_pose_node = Node(
+        package="isaac_ros_navigation_goal",
+        executable="PublishInitialPose",
+        name="publish_initial_pose",
+        namespace="carter1",
+        output="screen",
+        parameters=[
+            {
+                "initial_pose": initial_pose,
+                "frame_id": "map",
+                "wait_for_subscribers_timeout_sec": 120.0,
+                "publish_repetitions": 3,
+                "publish_period_sec": 1.0,
+            }
+        ],
+    )
+    set_simulation_playing_node = Node(
+        package="isaac_ros_navigation_goal",
+        executable="SetSimulationPlaying",
+        name="set_simulation_playing",
+        namespace="carter1",
+        output="screen",
+    )
+
     nav2_stack = [
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(os.path.join(nav2_bringup_launch_dir, "rviz_launch.py")),
@@ -145,7 +174,11 @@ def generate_launch_description():
                 {
                     "use_sim_time": use_sim_time,
                 }
-            ]
+            ],
+            remappings=[
+                ("/tf", ["/carter1/tf"]),
+                ("/tf_static", ["/carter1/tf_static"]),
+            ],
         ),
         Node(
             name="image_throttler",
@@ -153,7 +186,7 @@ def generate_launch_description():
             executable="throttle",
             output="screen",
             namespace='carter1',
-            arguments=["messages", "/front_stereo_camera/left/image_raw", "5.0", "/front_stereo_camera/left/image_raw_throttled"],
+            arguments=["messages", "front_stereo_camera/left/image_raw", "5.0", "front_stereo_camera/left/image_raw_throttled"],
         ),
         Node(
             package="pointcloud_to_laserscan",
@@ -189,10 +222,25 @@ def generate_launch_description():
                 on_stderr=lambda event: execute_second_node_if_condition_met(
                     event,
                     ld_record_and_start,
-                    "[global_costmap.global_costmap]: start",
+                    "global_costmap.global_costmap]: start",
                 )
             ),
             condition=IfCondition(LaunchConfiguration("send_goals")),
+        ),
+        RegisterEventHandler(
+            OnProcessIO(
+                on_stderr=lambda event: execute_second_node_if_condition_met(
+                    event,
+                    publish_initial_pose_node,
+                    "amcl]: Activating",
+                )
+            )
+        ),
+        RegisterEventHandler(
+            OnProcessExit(
+                target_action=publish_initial_pose_node,
+                on_exit=start_playing_after_initialpose,
+            )
         ),
         # Shut down when all goals reached
         RegisterEventHandler(
@@ -212,6 +260,13 @@ def generate_launch_description():
         executable='checklist',
         name='checklist_node',
         namespace='carter1',
+        parameters=[
+            {
+                "initial_pose": initial_pose,
+                "isaacsim_entity": isaacsim_entity,
+                "world_uri": world_uri,
+            }
+        ],
     )
 
     nav2_stack_handler = RegisterEventHandler(
@@ -224,8 +279,14 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument("rviz", default_value="false", description="Launch RViz if true"),
         DeclareLaunchArgument("send_goals", default_value="true", description="Send goals if true"),
-        DeclareLaunchArgument("initial_pose", default_value=str(default_initial_pose), 
-                            description="Initial pose of the robot [x, y, z, qx, qy, qz, qw]"),
+        DeclareLaunchArgument("goal_text_file_path", default_value=experience_config["goals_path"],
+                            description="Path to the goals text file"),
+        DeclareLaunchArgument("initial_pose", default_value=str(experience_config["initial_pose"]), 
+                            description="Initial pose of the robot [x, y, z, qw, qx, qy, qz]"),
+        DeclareLaunchArgument("isaacsim_entity", default_value=experience_config["isaacsim_entity"],
+                            description="Isaac Sim entity/prim path to reposition before play"),
+        DeclareLaunchArgument("world_uri", default_value=experience_config["world_uri"],
+                            description="Isaac Sim world URI to load before simulation starts"),
         checklist_node,
         nav2_stack_handler,
     ])

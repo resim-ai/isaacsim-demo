@@ -15,6 +15,7 @@
 
 import os
 from ament_index_python.packages import get_package_share_directory
+from isaac_ros_navigation_goal.experience_config import load_experience_config
 from launch import LaunchDescription
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
@@ -31,6 +32,11 @@ def exit_handler(event: ProcessExited, context: LaunchContext):
 
 def generate_launch_description():
     use_sim_time = LaunchConfiguration("use_sim_time", default=True)
+    experience_config = load_experience_config(
+        default_initial_pose=[-6.4, -1.04, 0.0, 0.02, 0.0, 0.0, 0.99]
+    )
+
+    namespace = LaunchConfiguration("namespace", default="carter1")
 
     map_yaml_file = LaunchConfiguration(
         "map_yaml_path",
@@ -41,27 +47,30 @@ def generate_launch_description():
 
     goal_text_file = LaunchConfiguration(
         "goal_text_file_path",
-        default=os.path.join(get_package_share_directory("isaac_ros_navigation_goal"), "assets", "goals.txt"),
+        default=experience_config["goals_path"],
     )
 
     initial_pose = LaunchConfiguration(
         "initial_pose",
-        default="[-6.4, -1.04, 0.0, 0.0, 0.0, 0.99, 0.02]",
+        default=str(experience_config["initial_pose"]),
     )
+    publish_initial_pose = LaunchConfiguration("publish_initial_pose", default="true")
 
     navigation_goal_node = Node(
         name="set_navigation_goal",
         package="isaac_ros_navigation_goal",
         executable="SetNavigationGoal",
+        namespace=namespace,
         parameters=[
             {
                 "map_yaml_path": map_yaml_file,
-                "iteration_count": 3,
+                "iteration_count": experience_config["goal_count"],
                 "goal_generator_type": "GoalReader",
                 "action_server_name": "navigate_to_pose",
                 "obstacle_search_distance_in_meters": 0.2,
                 "goal_text_file_path": goal_text_file,
                 "initial_pose": initial_pose,
+                "publish_initial_pose": publish_initial_pose,
                 "use_sim_time": use_sim_time,
                 # Production: increase initial_pose_settle_sec (e.g. 3.0) if bt_navigator reports "Failed to send goal response"
                 "initial_pose_settle_sec": 0.5,
