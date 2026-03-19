@@ -73,7 +73,7 @@ class Checklist(Node):
         ]
         for service_name, client in clients:
             self.get_logger().info(f"Waiting for /isaacsim/{service_name} service...")
-            if not client.wait_for_service(timeout_sec=30.0):
+            if not client.wait_for_service(timeout_sec=90.0):
                 self.get_logger().error(f"/isaacsim/{service_name} service not available")
                 return False
         self.get_logger().info("All services available.")

@@ -186,7 +186,7 @@ metrics:
     description: Sum of all 'Time to reach final goal' metrics across all experiences.
     query_string: |
       SELECT SUM(
-        CASE WHEN goal_count != 3 THEN 75 ELSE total_time END
+        CASE WHEN goal_count != 1 THEN 75 ELSE total_time END
       )
       FROM (
         SELECT job_id,
