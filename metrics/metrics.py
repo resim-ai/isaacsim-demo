@@ -67,6 +67,7 @@ class FrameIds(Enum):
     BASE_LINK = "base_link"
     ODOM = "odom"
     MAP = "map"
+    WORLD = "world"
 
 
 def parse_args() -> argparse.Namespace:
@@ -805,6 +806,141 @@ def emit_velocity_data(emitter: Emitter, input_bag: Path):
                 }, timestamp=timestamp)
                 last_emit_time = timestamp
 
+
+def get_topics_by_prefix(input_bag: Path, prefix: str) -> list[str]:
+    """Return all topic names in a bag that match a prefix."""
+    reader = rosbag2_py.SequentialReader()
+    reader.open(
+        rosbag2_py.StorageOptions(uri=str(input_bag), storage_id="mcap"),
+        rosbag2_py.ConverterOptions(
+            input_serialization_format="cdr", output_serialization_format="cdr"
+        ),
+    )
+    return sorted(
+        topic.name
+        for topic in reader.get_all_topics_and_types()
+        if topic.name.startswith(prefix)
+    )
+
+
+def emit_nearest_human_distance_data(
+    emitter: Emitter, input_bag: Path, transform_manager: TransformManager
+):
+    """Emit nearest-human distance from odometry and ground-truth pedestrian poses."""
+    logger.info("Starting nearest-human distance emission...")
+    odom_topic = "/carter1/chassis/odom"
+    ped_topics = get_topics_by_prefix(input_bag, "/ground_truth/ped/")
+    if not ped_topics:
+        logger.warning("No pedestrian ground-truth topics found")
+        return
+
+    latest_ped_poses: dict[str, PoseStamped] = {}
+    last_emit_time = None
+    emit_interval_ns = 100_000_000  # 10Hz
+    topics = [odom_topic, *ped_topics]
+    total_odom_samples = 0
+    ped_pose_updates = 0
+    transform_failures = 0
+    emitted_samples = 0
+
+    for topic, msg, timestamp in read_messages(str(input_bag), topics):
+        if topic == odom_topic:
+            assert isinstance(msg, Odometry)
+            total_odom_samples += 1
+            if last_emit_time is not None and (timestamp - last_emit_time) < emit_interval_ns:
+                continue
+            if not latest_ped_poses:
+                continue
+
+            odom_time = Time(
+                seconds=msg.header.stamp.sec,
+                nanoseconds=msg.header.stamp.nanosec,
+            )
+            robot_x = msg.pose.pose.position.x
+            robot_y = msg.pose.pose.position.y
+
+            nearest_distance = math.inf
+            nearest_person_name = None
+            for ped_topic, ped_pose_stamped in latest_ped_poses.items():
+                source_frame = ped_pose_stamped.header.frame_id
+                if not source_frame:
+                    continue
+
+                try:
+                    if source_frame == "odom":
+                        ped_pose = ped_pose_stamped.pose
+                    else:
+                        candidate_source_frames = [source_frame]
+                        # In some logs pedestrians are published in `world` while robot TF uses `map`.
+                        if source_frame == "world":
+                            candidate_source_frames.append("map")
+
+                        transformed_pose = None
+                        for candidate_source_frame in candidate_source_frames:
+                            try:
+                                transformed_pose = transform_manager.transform_pose(
+                                    ped_pose_stamped.pose,
+                                    "odom",
+                                    candidate_source_frame,
+                                    odom_time,
+                                )
+                                break
+                            except Exception:
+                                try:
+                                    # Fall back to latest available TF when exact time is unavailable.
+                                    transformed_pose = transform_manager.transform_pose(
+                                        ped_pose_stamped.pose,
+                                        "odom",
+                                        candidate_source_frame,
+                                        Time(),
+                                    )
+                                    break
+                                except Exception:
+                                    continue
+                        if transformed_pose is None:
+                            raise RuntimeError(
+                                f"Could not transform ped pose from any source frame candidate: {candidate_source_frames}"
+                            )
+                        ped_pose = transformed_pose
+                except Exception as e:
+                    transform_failures += 1
+                    logger.debug("Could not transform pedestrian pose", exc_info=e)
+                    continue
+
+                dx = ped_pose.position.x - robot_x
+                dy = ped_pose.position.y - robot_y
+                distance_m = math.hypot(dx, dy)
+                if distance_m < nearest_distance:
+                    nearest_distance = distance_m
+                    nearest_person_name = ped_topic.rsplit("/", maxsplit=1)[-1]
+
+            if nearest_person_name is None or not math.isfinite(nearest_distance):
+                continue
+
+            emitter.emit(
+                "nearest_human_distance",
+                {
+                    "distance_m": nearest_distance,
+                    "person_name": nearest_person_name,
+                },
+                timestamp=timestamp,
+            )
+            emitted_samples += 1
+            last_emit_time = timestamp
+        else:
+            assert isinstance(msg, PoseStamped)
+            latest_ped_poses[topic] = msg
+            ped_pose_updates += 1
+
+    logger.info(
+        "Nearest-human emission complete: %d emitted samples, %d ped updates, %d odom samples, %d transform failures, %d pedestrian topics",
+        emitted_samples,
+        ped_pose_updates,
+        total_odom_samples,
+        transform_failures,
+        len(ped_topics),
+    )
+
 def run_experience_metrics(args):
     """Run the metrics for a single experience."""
 
@@ -834,6 +970,7 @@ def run_experience_metrics(args):
         add_time_to_goal_metric(metrics_writer, args.log_path)
 
         emit_velocity_data(emitter, args.log_path)
+        emit_nearest_human_distance_data(emitter, args.log_path, transform_manager)
 
     # write_proto(metrics_writer, args.output_path)
 

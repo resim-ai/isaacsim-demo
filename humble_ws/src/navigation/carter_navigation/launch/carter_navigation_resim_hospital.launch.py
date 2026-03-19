@@ -21,13 +21,12 @@ from isaac_ros_navigation_goal.experience_config import load_experience_config  
 from launch import LaunchDescription, LaunchDescriptionEntity
 from launch.actions import TimerAction, IncludeLaunchDescription, DeclareLaunchArgument
 from launch.conditions import IfCondition
-from launch.launch_context import LaunchContext
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch.actions import RegisterEventHandler, ExecuteProcess, Shutdown
 from launch.event_handlers import OnProcessIO, OnProcessExit
-from launch.events.process import ProcessIO, ProcessExited
+from launch.events.process import ProcessIO
 
 def generate_launch_description():
     use_sim_time = LaunchConfiguration("use_sim_time", default="True")
@@ -116,12 +115,6 @@ def generate_launch_description():
             print("Condition met, launching the node.")
 
             return second_node_action
-
-    def start_playing_after_initialpose(event: ProcessExited, context: LaunchContext):
-        del context
-        if event.returncode == 0:
-            return [set_simulation_playing_node]
-        return [Shutdown(reason="PublishInitialPose failed; not starting simulation playback.")]
 
     publish_initial_pose_node = Node(
         package="isaac_ros_navigation_goal",
@@ -239,7 +232,9 @@ def generate_launch_description():
         RegisterEventHandler(
             OnProcessExit(
                 target_action=publish_initial_pose_node,
-                on_exit=start_playing_after_initialpose,
+                on_exit=lambda event, context: [set_simulation_playing_node]
+                if event.returncode == 0
+                else [Shutdown(reason="PublishInitialPose failed; not starting simulation playback.")],
             )
         ),
         # Shut down when all goals reached
@@ -272,7 +267,9 @@ def generate_launch_description():
     nav2_stack_handler = RegisterEventHandler(
         OnProcessExit(
             target_action=checklist_node,
-            on_exit=nav2_stack,
+            on_exit=lambda event, context: nav2_stack
+            if event.returncode == 0
+            else [Shutdown(reason="Checklist failed; not starting Nav2 stack.")],
         )
     )
     

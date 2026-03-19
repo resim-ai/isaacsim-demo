@@ -26,9 +26,8 @@ from launch.launch_context import LaunchContext
 
 def exit_handler(event: ProcessExited, context: LaunchContext):
     if event.returncode == 0:
-        Shutdown(reason="All goals completed.")
-    else:
-        raise RuntimeError("Failed to complete goals.")
+        return [Shutdown(reason="All goals completed.")]
+    return [Shutdown(reason="Navigation goal process failed.")]
 
 def generate_launch_description():
     use_sim_time = LaunchConfiguration("use_sim_time", default=True)

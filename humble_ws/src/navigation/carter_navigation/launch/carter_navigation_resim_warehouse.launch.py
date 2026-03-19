@@ -210,7 +210,9 @@ def generate_launch_description():
     nav2_stack_handler = RegisterEventHandler(
         OnProcessExit(
             target_action=checklist_node,
-            on_exit=nav2_stack,
+            on_exit=lambda event, context: nav2_stack
+            if event.returncode == 0
+            else [Shutdown(reason="Checklist failed; not starting Nav2 stack.")],
         )
     )
     

@@ -53,6 +53,10 @@ topics:
       x: float
       y: float
       z: float
+  nearest_human_distance:
+    schema:
+      distance_m: float
+      person_name: string
 
 metrics:
   Stereo Camera Feed:
@@ -63,11 +67,11 @@ metrics:
     template: image
   Time to reach final goal:
     type: test
-    description: Time between receiving first goal and reaching final goal; blocks if all 3 goals are not reached within 75 seconds.
+    description: Time between receiving first goal and reaching final goal; blocks if goal is not reached within 75 seconds.
     query_string: |
       SELECT 
         CASE 
-          WHEN (SELECT COUNT(*) FROM time_to_goal) != 3 THEN 75
+          WHEN (SELECT COUNT(*) FROM time_to_goal) != 1 THEN 75
           ELSE sum(time_s)
         END
       FROM time_to_goal;
@@ -76,7 +80,7 @@ metrics:
     units: seconds
     status:
       query_string: SELECT '1' FROM time_to_goal HAVING COUNT(*) < ?
-      block: 3
+      block: 1
   Goal Status:
     type: test
     description: Status of the goals over time.
@@ -89,6 +93,22 @@ metrics:
     query_string: SELECT goal_name as group_name, timestamp / 1E9 AS "Time (s)", distance_m as "Distance to Goal (m)" FROM goal_distance
     template_type: system
     template: line
+  Nearest-Human Distance:
+    type: test
+    description: Distance from the robot to the nearest tracked human over time.
+    query_string: |
+      SELECT
+        'Nearest Human' as group_name,
+        timestamp / 1E9 AS "Time (s)",
+        distance_m as "Distance to Nearest Human (m)"
+      FROM nearest_human_distance;
+    template_type: system
+    template: line
+    skip_if_no_data: true
+    status:
+      query_string: SELECT 1 FROM nearest_human_distance WHERE distance_m < ? LIMIT 1
+      block: 0.5
+      warn: 1.0
   Robot Trajectory:
     type: test
     description: Top-down view of the robot's trajectory throughout the run, with goal points marked as yellow arrows.
@@ -242,6 +262,7 @@ metrics sets:
       - Time to reach final goal
       - Goal Status
       - Distance to Goal
+      - Nearest-Human Distance
       - Robot Trajectory
       - Robot Speed
       - Localization Error

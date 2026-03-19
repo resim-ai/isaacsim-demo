@@ -419,7 +419,7 @@ planner_server:
       lattice_filepath: "$(find-pkg-share isaac_ros_navigation_goal)/assets/control_set_diff_0.08m.json"
       allow_unknown: true                 # Allow traveling in unknown space
       tolerance: 0.25                     # dist-to-goal heuristic cost (distance) for valid tolerance endpoints if exact goal cannot be found.
-      max_iterations: 500000              # Maximum total iterations to search for before failing (in case unreachable), set to -1 to disable
+      max_iterations: 1000000              # Maximum total iterations to search for before failing (in case unreachable), set to -1 to disable
       max_on_approach_iterations: 1000    # Maximum number of iterations after within tolerances to continue to try to find exact solution
       max_planning_time: 5.0              # Max time in s for planner to plan, smooth
       analytic_expansion_ratio: 3.5       # The ratio to attempt analytic expansions during search for final approach.

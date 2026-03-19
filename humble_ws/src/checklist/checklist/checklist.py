@@ -5,6 +5,7 @@
 # https://opensource.org/licenses/MIT.
 
 import time
+import sys
 import rclpy
 from rclpy.node import Node
 from pathlib import Path
@@ -209,8 +210,10 @@ def main(args=None):
     future = Future()
     node = Checklist(future)
     rclpy.spin_until_future_complete(node, future)
+    success = bool(future.result())
     node.destroy_node()
     rclpy.shutdown()
+    sys.exit(0 if success else 1)
 
 
 if __name__ == "__main__":
