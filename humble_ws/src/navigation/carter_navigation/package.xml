@@ -59,7 +59,9 @@
   <build_depend>pointcloud_to_laserscan</build_depend>
   <build_depend>spatio_temporal_voxel_layer</build_depend>
   <build_depend>topic_tools</build_depend>
-  <build_depend>checklist</build_depend>
+  <build_depend>resim_isaac_control</build_depend>
+  <build_depend>rclpy</build_depend>
+  <build_depend>geometry_msgs</build_depend>
 
 
   <export>

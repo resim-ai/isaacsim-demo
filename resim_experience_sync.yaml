@@ -1,876 +1,1016 @@
 experiences:
-  - name: "Hospital South Hallway Navigation From Room - Bright with Pedestrians"
-    description: "Robot navigates from patient room to lobby in bright environment with pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/south_hallway_from_room_bright_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Bright"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "Yes"
-      - name: "Area"
-        type: "text"
-        values:
-          - "South Hallway"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "From Patient Room"
-  - name: "Hospital South Hallway Navigation From Room - Bright without Pedestrians"
-    description: "Robot navigates from patient room to lobby in bright environment without pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/south_hallway_from_room_bright_no_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Bright"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "No"
-      - name: "Area"
-        type: "text"
-        values:
-          - "South Hallway"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "From Patient Room"
-  - name: "Hospital South Hallway Navigation From Room - Dim with Pedestrians"
-    description: "Robot navigates from patient room to lobby in dim environment with pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/south_hallway_from_room_dim_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Dim"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "Yes"
-      - name: "Area"
-        type: "text"
-        values:
-          - "South Hallway"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "From Patient Room"
-  - name: "Hospital South Hallway Navigation From Room - Dim without Pedestrians"
-    description: "Robot navigates from patient room to lobby in dim environment without pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/south_hallway_from_room_dim_no_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Dim"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "No"
-      - name: "Area"
-        type: "text"
-        values:
-          - "South Hallway"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "From Patient Room"
-  - name: "Hospital South Hallway Navigation From Room - Dark with Pedestrians"
-    description: "Robot navigates from patient room to lobby in dark environment with pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/south_hallway_from_room_dark_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Dark"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "Yes"
-      - name: "Area"
-        type: "text"
-        values:
-          - "South Hallway"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "From Patient Room"
-  - name: "Hospital South Hallway Navigation From Room - Dark without Pedestrians"
-    description: "Robot navigates from patient room to lobby in dark environment without pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/south_hallway_from_room_dark_no_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Dark"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "No"
-      - name: "Area"
-        type: "text"
-        values:
-          - "South Hallway"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "From Patient Room"
-  - name: "Hospital South Hallway Navigation To Room - Bright with Pedestrians"
-    description: "Robot navigates from lobby to patient room in bright environment with pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/south_hallway_to_room_bright_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Bright"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "Yes"
-      - name: "Area"
-        type: "text"
-        values:
-          - "South Hallway"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "To Patient Room"
-  - name: "Hospital South Hallway Navigation To Room - Bright without Pedestrians"
-    description: "Robot navigates from lobby to patient room in bright environment without pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/south_hallway_to_room_bright_no_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Bright"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "No"
-      - name: "Area"
-        type: "text"
-        values:
-          - "South Hallway"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "To Patient Room"
-  - name: "Hospital South Hallway Navigation To Room - Dim with Pedestrians"
-    description: "Robot navigates from lobby to patient room in dim environment with pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/south_hallway_to_room_dim_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Dim"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "Yes"
-      - name: "Area"
-        type: "text"
-        values:
-          - "South Hallway"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "To Patient Room"
-  - name: "Hospital South Hallway Navigation To Room - Dim without Pedestrians"
-    description: "Robot navigates from lobby to patient room in dim environment without pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/south_hallway_to_room_dim_no_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Dim"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "No"
-      - name: "Area"
-        type: "text"
-        values:
-          - "South Hallway"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "To Patient Room"
-  - name: "Hospital South Hallway Navigation To Room - Dark with Pedestrians"
-    description: "Robot navigates from lobby to patient room in dark environment with pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/south_hallway_to_room_dark_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Dark"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "Yes"
-      - name: "Area"
-        type: "text"
-        values:
-          - "South Hallway"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "To Patient Room"
-  - name: "Hospital South Hallway Navigation To Room - Dark without Pedestrians"
-    description: "Robot navigates from lobby to patient room in dark environment without pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/south_hallway_to_room_dark_no_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Dark"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "No"
-      - name: "Area"
-        type: "text"
-        values:
-          - "South Hallway"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "To Patient Room"
-  - name: "Hospital East Hallway Navigation From North Hallway - Bright with Pedestrians"
-    description: "Robot navigates from north hallway to lobby in bright environment with pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/east_hallway_from_north_hallway_bright_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Bright"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "Yes"
-      - name: "Area"
-        type: "text"
-        values:
-          - "East Hallway"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "From North Hallway"
-  - name: "Hospital East Hallway Navigation From North Hallway - Bright without Pedestrians"
-    description: "Robot navigates from north hallway to lobby in bright environment without pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/east_hallway_from_north_hallway_bright_no_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Bright"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "No"
-      - name: "Area"
-        type: "text"
-        values:
-          - "East Hallway"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "From North Hallway"
-  - name: "Hospital East Hallway Navigation From North Hallway - Dim with Pedestrians"
-    description: "Robot navigates from north hallway to lobby in dim environment with pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/east_hallway_from_north_hallway_dim_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Dim"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "Yes"
-      - name: "Area"
-        type: "text"
-        values:
-          - "East Hallway"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "From North Hallway"
-  - name: "Hospital East Hallway Navigation From North Hallway - Dim without Pedestrians"
-    description: "Robot navigates from north hallway to lobby in dim environment without pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/east_hallway_from_north_hallway_dim_no_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Dim"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "No"
-      - name: "Area"
-        type: "text"
-        values:
-          - "East Hallway"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "From North Hallway"
-  - name: "Hospital East Hallway Navigation From North Hallway - Dark with Pedestrians"
-    description: "Robot navigates from north hallway to lobby in dark environment with pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/east_hallway_from_north_hallway_dark_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Dark"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "Yes"
-      - name: "Area"
-        type: "text"
-        values:
-          - "East Hallway"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "From North Hallway"
-  - name: "Hospital East Hallway Navigation From North Hallway - Dark without Pedestrians"
-    description: "Robot navigates from north hallway to lobby in dark environment without pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/east_hallway_from_north_hallway_dark_no_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Dark"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "No"
-      - name: "Area"
-        type: "text"
-        values:
-          - "East Hallway"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "From North Hallway"
-  - name: "Hospital East Hallway Navigation To North Hallway - Bright with Pedestrians"
-    description: "Robot navigates from lobby to north hallway in bright environment with pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/east_hallway_to_north_hallway_bright_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Bright"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "Yes"
-      - name: "Area"
-        type: "text"
-        values:
-          - "East Hallway"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "To North Hallway"
-  - name: "Hospital East Hallway Navigation To North Hallway - Bright without Pedestrians"
-    description: "Robot navigates from lobby to north hallway in bright environment without pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/east_hallway_to_north_hallway_bright_no_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Bright"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "No"
-      - name: "Area"
-        type: "text"
-        values:
-          - "East Hallway"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "To North Hallway"
-  - name: "Hospital East Hallway Navigation To North Hallway - Dim with Pedestrians"
-    description: "Robot navigates from lobby to north hallway in dim environment with pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/east_hallway_to_north_hallway_dim_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Dim"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "Yes"
-      - name: "Area"
-        type: "text"
-        values:
-          - "East Hallway"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "To North Hallway"
-  - name: "Hospital East Hallway Navigation To North Hallway - Dim without Pedestrians"
-    description: "Robot navigates from lobby to north hallway in dim environment without pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/east_hallway_to_north_hallway_dim_no_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Dim"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "No"
-      - name: "Area"
-        type: "text"
-        values:
-          - "East Hallway"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "To North Hallway"
-  - name: "Hospital East Hallway Navigation To North Hallway - Dark with Pedestrians"
-    description: "Robot navigates from lobby to north hallway in dark environment with pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/east_hallway_to_north_hallway_dark_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Dark"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "Yes"
-      - name: "Area"
-        type: "text"
-        values:
-          - "East Hallway"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "To North Hallway"
-  - name: "Hospital East Hallway Navigation To North Hallway - Dark without Pedestrians"
-    description: "Robot navigates from lobby to north hallway in dark environment without pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/east_hallway_to_north_hallway_dark_no_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Dark"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "No"
-      - name: "Area"
-        type: "text"
-        values:
-          - "East Hallway"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "To North Hallway"
-  - name: "Hospital Lobby Navigation From North Hallway - Bright with Pedestrians"
-    description: "Robot navigates from north hallway to lobby in bright environment with pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/lobby_from_north_hallway_bright_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Bright"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "Yes"
-      - name: "Area"
-        type: "text"
-        values:
-          - "Lobby"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "From North Hallway"
-  - name: "Hospital Lobby Navigation From North Hallway - Bright without Pedestrians"
-    description: "Robot navigates from north hallway to lobby in bright environment without pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/lobby_from_north_hallway_bright_no_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Bright"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "No"
-      - name: "Area"
-        type: "text"
-        values:
-          - "Lobby"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "From North Hallway"
-  - name: "Hospital Lobby Navigation From North Hallway - Dim with Pedestrians"
-    description: "Robot navigates from north hallway to lobby in dim environment with pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/lobby_from_north_hallway_dim_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Dim"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "Yes"
-      - name: "Area"
-        type: "text"
-        values:
-          - "Lobby"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "From North Hallway"
-  - name: "Hospital Lobby Navigation From North Hallway - Dim without Pedestrians"
-    description: "Robot navigates from north hallway to lobby in dim environment without pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/lobby_from_north_hallway_dim_no_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Dim"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "No"
-      - name: "Area"
-        type: "text"
-        values:
-          - "Lobby"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "From North Hallway"
-  - name: "Hospital Lobby Navigation From North Hallway - Dark with Pedestrians"
-    description: "Robot navigates from north hallway to lobby in dark environment with pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/lobby_from_north_hallway_dark_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Dark"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "Yes"
-      - name: "Area"
-        type: "text"
-        values:
-          - "Lobby"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "From North Hallway"
-  - name: "Hospital Lobby Navigation From North Hallway - Dark without Pedestrians"
-    description: "Robot navigates from north hallway to lobby in dark environment without pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/lobby_from_north_hallway_dark_no_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Dark"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "No"
-      - name: "Area"
-        type: "text"
-        values:
-          - "Lobby"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "From North Hallway"
-  - name: "Hospital Lobby Navigation To North Hallway - Bright with Pedestrians"
-    description: "Robot navigates from lobby to north hallway in bright environment with pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/lobby_to_north_hallway_bright_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Bright"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "Yes"
-      - name: "Area"
-        type: "text"
-        values:
-          - "Lobby"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "To North Hallway"
-  - name: "Hospital Lobby Navigation To North Hallway - Bright without Pedestrians"
-    description: "Robot navigates from lobby to north hallway in bright environment without pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/lobby_to_north_hallway_bright_no_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Bright"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "No"
-      - name: "Area"
-        type: "text"
-        values:
-          - "Lobby"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "To North Hallway"
-  - name: "Hospital Lobby Navigation To North Hallway - Dim with Pedestrians"
-    description: "Robot navigates from lobby to north hallway in dim environment with pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/lobby_to_north_hallway_dim_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Dim"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "Yes"
-      - name: "Area"
-        type: "text"
-        values:
-          - "Lobby"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "To North Hallway"
-  - name: "Hospital Lobby Navigation To North Hallway - Dim without Pedestrians"
-    description: "Robot navigates from lobby to north hallway in dim environment without pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/lobby_to_north_hallway_dim_no_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Dim"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "No"
-      - name: "Area"
-        type: "text"
-        values:
-          - "Lobby"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "To North Hallway"
-  - name: "Hospital Lobby Navigation To North Hallway - Dark with Pedestrians"
-    description: "Robot navigates from lobby to north hallway in dark environment with pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/lobby_to_north_hallway_dark_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Dark"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "Yes"
-      - name: "Area"
-        type: "text"
-        values:
-          - "Lobby"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "To North Hallway"
-  - name: "Hospital Lobby Navigation To North Hallway - Dark without Pedestrians"
-    description: "Robot navigates from lobby to north hallway in dark environment without pedestrians."
-    systems: ["Isaac Sim"]
-    containerTimeoutSeconds: 1800
-    locations:
-      - "/experiences/lobby_to_north_hallway_dark_no_ped.yaml"
-    customFields:
-      - name: "Lighting"
-        type: "text"
-        values:
-          - "Dark"
-      - name: "Pedestrians"
-        type: "text"
-        values:
-          - "No"
-      - name: "Area"
-        type: "text"
-        values:
-          - "Lobby"
-      - name: "Direction"
-        type: "text"
-        values:
-          - "To North Hallway"
+- name: Hospital East Hallway Navigation From North Hallway - Bright with Pedestrians
+  description: Robot navigates from north hallway to lobby in bright environment with pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/east_hallway_from_north_hallway_bright_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Bright
+  - name: Pedestrians
+    type: text
+    values:
+    - 'Yes'
+  - name: Area
+    type: text
+    values:
+    - East Hallway
+  - name: Direction
+    type: text
+    values:
+    - From North Hallway
+- name: Hospital East Hallway Navigation From North Hallway - Bright without Pedestrians
+  description: Robot navigates from north hallway to lobby in bright environment without pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/east_hallway_from_north_hallway_bright_no_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Bright
+  - name: Pedestrians
+    type: text
+    values:
+    - 'No'
+  - name: Area
+    type: text
+    values:
+    - East Hallway
+  - name: Direction
+    type: text
+    values:
+    - From North Hallway
+- name: Hospital East Hallway Navigation From North Hallway - Dark with Pedestrians
+  description: Robot navigates from north hallway to lobby in dark environment with pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/east_hallway_from_north_hallway_dark_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Dark
+  - name: Pedestrians
+    type: text
+    values:
+    - 'Yes'
+  - name: Area
+    type: text
+    values:
+    - East Hallway
+  - name: Direction
+    type: text
+    values:
+    - From North Hallway
+- name: Hospital East Hallway Navigation From North Hallway - Dark without Pedestrians
+  description: Robot navigates from north hallway to lobby in dark environment without pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/east_hallway_from_north_hallway_dark_no_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Dark
+  - name: Pedestrians
+    type: text
+    values:
+    - 'No'
+  - name: Area
+    type: text
+    values:
+    - East Hallway
+  - name: Direction
+    type: text
+    values:
+    - From North Hallway
+- name: Hospital East Hallway Navigation From North Hallway - Dim with Pedestrians
+  description: Robot navigates from north hallway to lobby in dim environment with pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/east_hallway_from_north_hallway_dim_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Dim
+  - name: Pedestrians
+    type: text
+    values:
+    - 'Yes'
+  - name: Area
+    type: text
+    values:
+    - East Hallway
+  - name: Direction
+    type: text
+    values:
+    - From North Hallway
+- name: Hospital East Hallway Navigation From North Hallway - Dim without Pedestrians
+  description: Robot navigates from north hallway to lobby in dim environment without pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/east_hallway_from_north_hallway_dim_no_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Dim
+  - name: Pedestrians
+    type: text
+    values:
+    - 'No'
+  - name: Area
+    type: text
+    values:
+    - East Hallway
+  - name: Direction
+    type: text
+    values:
+    - From North Hallway
+- name: Hospital East Hallway Navigation To North Hallway - Bright with Pedestrians
+  description: Robot navigates from lobby to north hallway in bright environment with pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/east_hallway_to_north_hallway_bright_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Bright
+  - name: Pedestrians
+    type: text
+    values:
+    - 'Yes'
+  - name: Area
+    type: text
+    values:
+    - East Hallway
+  - name: Direction
+    type: text
+    values:
+    - To North Hallway
+- name: Hospital East Hallway Navigation To North Hallway - Bright without Pedestrians
+  description: Robot navigates from lobby to north hallway in bright environment without pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/east_hallway_to_north_hallway_bright_no_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Bright
+  - name: Pedestrians
+    type: text
+    values:
+    - 'No'
+  - name: Area
+    type: text
+    values:
+    - East Hallway
+  - name: Direction
+    type: text
+    values:
+    - To North Hallway
+- name: Hospital East Hallway Navigation To North Hallway - Dark with Pedestrians
+  description: Robot navigates from lobby to north hallway in dark environment with pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/east_hallway_to_north_hallway_dark_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Dark
+  - name: Pedestrians
+    type: text
+    values:
+    - 'Yes'
+  - name: Area
+    type: text
+    values:
+    - East Hallway
+  - name: Direction
+    type: text
+    values:
+    - To North Hallway
+- name: Hospital East Hallway Navigation To North Hallway - Dark without Pedestrians
+  description: Robot navigates from lobby to north hallway in dark environment without pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/east_hallway_to_north_hallway_dark_no_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Dark
+  - name: Pedestrians
+    type: text
+    values:
+    - 'No'
+  - name: Area
+    type: text
+    values:
+    - East Hallway
+  - name: Direction
+    type: text
+    values:
+    - To North Hallway
+- name: Hospital East Hallway Navigation To North Hallway - Dim with Pedestrians
+  description: Robot navigates from lobby to north hallway in dim environment with pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/east_hallway_to_north_hallway_dim_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Dim
+  - name: Pedestrians
+    type: text
+    values:
+    - 'Yes'
+  - name: Area
+    type: text
+    values:
+    - East Hallway
+  - name: Direction
+    type: text
+    values:
+    - To North Hallway
+- name: Hospital East Hallway Navigation To North Hallway - Dim without Pedestrians
+  description: Robot navigates from lobby to north hallway in dim environment without pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/east_hallway_to_north_hallway_dim_no_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Dim
+  - name: Pedestrians
+    type: text
+    values:
+    - 'No'
+  - name: Area
+    type: text
+    values:
+    - East Hallway
+  - name: Direction
+    type: text
+    values:
+    - To North Hallway
+- name: Hospital Lobby Navigation From North Hallway - Bright with Pedestrians
+  description: Robot navigates from north hallway to lobby in bright environment with pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/lobby_from_north_hallway_bright_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Bright
+  - name: Pedestrians
+    type: text
+    values:
+    - 'Yes'
+  - name: Area
+    type: text
+    values:
+    - Lobby
+  - name: Direction
+    type: text
+    values:
+    - From North Hallway
+- name: Hospital Lobby Navigation From North Hallway - Bright without Pedestrians
+  description: Robot navigates from north hallway to lobby in bright environment without pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/lobby_from_north_hallway_bright_no_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Bright
+  - name: Pedestrians
+    type: text
+    values:
+    - 'No'
+  - name: Area
+    type: text
+    values:
+    - Lobby
+  - name: Direction
+    type: text
+    values:
+    - From North Hallway
+- name: Hospital Lobby Navigation From North Hallway - Dark with Pedestrians
+  description: Robot navigates from north hallway to lobby in dark environment with pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/lobby_from_north_hallway_dark_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Dark
+  - name: Pedestrians
+    type: text
+    values:
+    - 'Yes'
+  - name: Area
+    type: text
+    values:
+    - Lobby
+  - name: Direction
+    type: text
+    values:
+    - From North Hallway
+- name: Hospital Lobby Navigation From North Hallway - Dark without Pedestrians
+  description: Robot navigates from north hallway to lobby in dark environment without pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/lobby_from_north_hallway_dark_no_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Dark
+  - name: Pedestrians
+    type: text
+    values:
+    - 'No'
+  - name: Area
+    type: text
+    values:
+    - Lobby
+  - name: Direction
+    type: text
+    values:
+    - From North Hallway
+- name: Hospital Lobby Navigation From North Hallway - Dim with Pedestrians
+  description: Robot navigates from north hallway to lobby in dim environment with pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/lobby_from_north_hallway_dim_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Dim
+  - name: Pedestrians
+    type: text
+    values:
+    - 'Yes'
+  - name: Area
+    type: text
+    values:
+    - Lobby
+  - name: Direction
+    type: text
+    values:
+    - From North Hallway
+- name: Hospital Lobby Navigation From North Hallway - Dim without Pedestrians
+  description: Robot navigates from north hallway to lobby in dim environment without pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/lobby_from_north_hallway_dim_no_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Dim
+  - name: Pedestrians
+    type: text
+    values:
+    - 'No'
+  - name: Area
+    type: text
+    values:
+    - Lobby
+  - name: Direction
+    type: text
+    values:
+    - From North Hallway
+- name: Hospital Lobby Navigation To North Hallway - Bright with Pedestrians
+  description: Robot navigates from lobby to north hallway in bright environment with pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/lobby_to_north_hallway_bright_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Bright
+  - name: Pedestrians
+    type: text
+    values:
+    - 'Yes'
+  - name: Area
+    type: text
+    values:
+    - Lobby
+  - name: Direction
+    type: text
+    values:
+    - To North Hallway
+- name: Hospital Lobby Navigation To North Hallway - Bright without Pedestrians
+  description: Robot navigates from lobby to north hallway in bright environment without pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/lobby_to_north_hallway_bright_no_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Bright
+  - name: Pedestrians
+    type: text
+    values:
+    - 'No'
+  - name: Area
+    type: text
+    values:
+    - Lobby
+  - name: Direction
+    type: text
+    values:
+    - To North Hallway
+- name: Hospital Lobby Navigation To North Hallway - Dark with Pedestrians
+  description: Robot navigates from lobby to north hallway in dark environment with pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/lobby_to_north_hallway_dark_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Dark
+  - name: Pedestrians
+    type: text
+    values:
+    - 'Yes'
+  - name: Area
+    type: text
+    values:
+    - Lobby
+  - name: Direction
+    type: text
+    values:
+    - To North Hallway
+- name: Hospital Lobby Navigation To North Hallway - Dark without Pedestrians
+  description: Robot navigates from lobby to north hallway in dark environment without pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/lobby_to_north_hallway_dark_no_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Dark
+  - name: Pedestrians
+    type: text
+    values:
+    - 'No'
+  - name: Area
+    type: text
+    values:
+    - Lobby
+  - name: Direction
+    type: text
+    values:
+    - To North Hallway
+- name: Hospital Lobby Navigation To North Hallway - Dim with Pedestrians
+  description: Robot navigates from lobby to north hallway in dim environment with pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/lobby_to_north_hallway_dim_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Dim
+  - name: Pedestrians
+    type: text
+    values:
+    - 'Yes'
+  - name: Area
+    type: text
+    values:
+    - Lobby
+  - name: Direction
+    type: text
+    values:
+    - To North Hallway
+- name: Hospital Lobby Navigation To North Hallway - Dim without Pedestrians
+  description: Robot navigates from lobby to north hallway in dim environment without pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/lobby_to_north_hallway_dim_no_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Dim
+  - name: Pedestrians
+    type: text
+    values:
+    - 'No'
+  - name: Area
+    type: text
+    values:
+    - Lobby
+  - name: Direction
+    type: text
+    values:
+    - To North Hallway
+- name: Hospital South Hallway Navigation From Room - Bright with Pedestrians
+  description: Robot navigates from patient room to lobby in bright environment with pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/south_hallway_from_room_bright_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Bright
+  - name: Pedestrians
+    type: text
+    values:
+    - 'Yes'
+  - name: Area
+    type: text
+    values:
+    - South Hallway
+  - name: Direction
+    type: text
+    values:
+    - From Patient Room
+- name: Hospital South Hallway Navigation From Room - Bright without Pedestrians
+  description: Robot navigates from patient room to lobby in bright environment without pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/south_hallway_from_room_bright_no_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Bright
+  - name: Pedestrians
+    type: text
+    values:
+    - 'No'
+  - name: Area
+    type: text
+    values:
+    - South Hallway
+  - name: Direction
+    type: text
+    values:
+    - From Patient Room
+- name: Hospital South Hallway Navigation From Room - Dark with Pedestrians
+  description: Robot navigates from patient room to lobby in dark environment with pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/south_hallway_from_room_dark_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Dark
+  - name: Pedestrians
+    type: text
+    values:
+    - 'Yes'
+  - name: Area
+    type: text
+    values:
+    - South Hallway
+  - name: Direction
+    type: text
+    values:
+    - From Patient Room
+- name: Hospital South Hallway Navigation From Room - Dark without Pedestrians
+  description: Robot navigates from patient room to lobby in dark environment without pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/south_hallway_from_room_dark_no_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Dark
+  - name: Pedestrians
+    type: text
+    values:
+    - 'No'
+  - name: Area
+    type: text
+    values:
+    - South Hallway
+  - name: Direction
+    type: text
+    values:
+    - From Patient Room
+- name: Hospital South Hallway Navigation From Room - Dim with Pedestrians
+  description: Robot navigates from patient room to lobby in dim environment with pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/south_hallway_from_room_dim_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Dim
+  - name: Pedestrians
+    type: text
+    values:
+    - 'Yes'
+  - name: Area
+    type: text
+    values:
+    - South Hallway
+  - name: Direction
+    type: text
+    values:
+    - From Patient Room
+- name: Hospital South Hallway Navigation From Room - Dim without Pedestrians
+  description: Robot navigates from patient room to lobby in dim environment without pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/south_hallway_from_room_dim_no_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Dim
+  - name: Pedestrians
+    type: text
+    values:
+    - 'No'
+  - name: Area
+    type: text
+    values:
+    - South Hallway
+  - name: Direction
+    type: text
+    values:
+    - From Patient Room
+- name: Hospital South Hallway Navigation To Room - Bright with Pedestrians
+  description: Robot navigates from lobby to patient room in bright environment with pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/south_hallway_to_room_bright_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Bright
+  - name: Pedestrians
+    type: text
+    values:
+    - 'Yes'
+  - name: Area
+    type: text
+    values:
+    - South Hallway
+  - name: Direction
+    type: text
+    values:
+    - To Patient Room
+- name: Hospital South Hallway Navigation To Room - Bright without Pedestrians
+  description: Robot navigates from lobby to patient room in bright environment without pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/south_hallway_to_room_bright_no_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Bright
+  - name: Pedestrians
+    type: text
+    values:
+    - 'No'
+  - name: Area
+    type: text
+    values:
+    - South Hallway
+  - name: Direction
+    type: text
+    values:
+    - To Patient Room
+- name: Hospital South Hallway Navigation To Room - Dark with Pedestrians
+  description: Robot navigates from lobby to patient room in dark environment with pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/south_hallway_to_room_dark_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Dark
+  - name: Pedestrians
+    type: text
+    values:
+    - 'Yes'
+  - name: Area
+    type: text
+    values:
+    - South Hallway
+  - name: Direction
+    type: text
+    values:
+    - To Patient Room
+- name: Hospital South Hallway Navigation To Room - Dark without Pedestrians
+  description: Robot navigates from lobby to patient room in dark environment without pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/south_hallway_to_room_dark_no_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Dark
+  - name: Pedestrians
+    type: text
+    values:
+    - 'No'
+  - name: Area
+    type: text
+    values:
+    - South Hallway
+  - name: Direction
+    type: text
+    values:
+    - To Patient Room
+- name: Hospital South Hallway Navigation To Room - Dim with Pedestrians
+  description: Robot navigates from lobby to patient room in dim environment with pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/south_hallway_to_room_dim_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Dim
+  - name: Pedestrians
+    type: text
+    values:
+    - 'Yes'
+  - name: Area
+    type: text
+    values:
+    - South Hallway
+  - name: Direction
+    type: text
+    values:
+    - To Patient Room
+- name: Hospital South Hallway Navigation To Room - Dim without Pedestrians
+  description: Robot navigates from lobby to patient room in dim environment without pedestrians.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/hospital/south_hallway_to_room_dim_no_ped.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Dim
+  - name: Pedestrians
+    type: text
+    values:
+    - 'No'
+  - name: Area
+    type: text
+    values:
+    - South Hallway
+  - name: Direction
+    type: text
+    values:
+    - To Patient Room
+- name: Warehouse Forklift Navigation
+  description: Robot navigates from north of warehouse around the forklift.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/warehouse/forklift.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Bright
+  - name: Pedestrians
+    type: text
+    values:
+    - 'No'
+- name: Warehouse Forklift Navigation Reverse
+  description: Robot navigates from north of warehouse around the forklift in reverse order.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/warehouse/forklift_reverse.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Bright
+  - name: Pedestrians
+    type: text
+    values:
+    - 'No'
+- name: Warehouse Mid Room Navigation
+  description: Robot navigates from north of warehouse through waypoints in the middle of the room.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/warehouse/mid_room.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Bright
+  - name: Pedestrians
+    type: text
+    values:
+    - 'No'
+- name: Warehouse Mid Room Navigation Reverse
+  description: Robot navigates from north of warehouse through waypoints in the middle of the room in reverse order.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/warehouse/mid_room_reverse.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Bright
+  - name: Pedestrians
+    type: text
+    values:
+    - 'No'
+- name: Warehouse Perimeter Navigation
+  description: Robot navigates from north of warehouse through the perimeter of the warehouse.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/warehouse/perimeter.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Bright
+  - name: Pedestrians
+    type: text
+    values:
+    - 'No'
+- name: Warehouse Perimeter Navigation Reverse
+  description: Robot navigates from north of warehouse through the perimeter of the warehouse in reverse.
+  systems:
+  - Isaac Sim
+  containerTimeoutSeconds: 1800
+  locations:
+  - /experiences/warehouse/perimeter_reverse.yaml
+  customFields:
+  - name: Lighting
+    type: text
+    values:
+    - Bright
+  - name: Pedestrians
+    type: text
+    values:
+    - 'No'
 managedTestSuites:
-  - name: "Hospital Demo"
-    experiences:
-      - "Hospital South Hallway Navigation From Room - Bright with Pedestrians"
-      - "Hospital South Hallway Navigation From Room - Bright without Pedestrians"
-      - "Hospital South Hallway Navigation From Room - Dim with Pedestrians"
-      - "Hospital South Hallway Navigation From Room - Dim without Pedestrians"
-      - "Hospital South Hallway Navigation From Room - Dark with Pedestrians"
-      - "Hospital South Hallway Navigation From Room - Dark without Pedestrians"
-      - "Hospital South Hallway Navigation To Room - Bright with Pedestrians"
-      - "Hospital South Hallway Navigation To Room - Bright without Pedestrians"
-      - "Hospital South Hallway Navigation To Room - Dim with Pedestrians"
-      - "Hospital South Hallway Navigation To Room - Dim without Pedestrians"
-      - "Hospital South Hallway Navigation To Room - Dark with Pedestrians"
-      - "Hospital South Hallway Navigation To Room - Dark without Pedestrians"
-      - "Hospital East Hallway Navigation From North Hallway - Bright with Pedestrians"
-      - "Hospital East Hallway Navigation From North Hallway - Bright without Pedestrians"
-      - "Hospital East Hallway Navigation From North Hallway - Dim with Pedestrians"
-      - "Hospital East Hallway Navigation From North Hallway - Dim without Pedestrians"
-      - "Hospital East Hallway Navigation From North Hallway - Dark with Pedestrians"
-      - "Hospital East Hallway Navigation From North Hallway - Dark without Pedestrians"
-      - "Hospital East Hallway Navigation To North Hallway - Bright with Pedestrians"
-      - "Hospital East Hallway Navigation To North Hallway - Bright without Pedestrians"
-      - "Hospital East Hallway Navigation To North Hallway - Dim with Pedestrians"
-      - "Hospital East Hallway Navigation To North Hallway - Dim without Pedestrians"
-      - "Hospital East Hallway Navigation To North Hallway - Dark with Pedestrians"
-      - "Hospital East Hallway Navigation To North Hallway - Dark without Pedestrians"
-      - "Hospital Lobby Navigation From North Hallway - Bright with Pedestrians"
-      - "Hospital Lobby Navigation From North Hallway - Bright without Pedestrians"
-      - "Hospital Lobby Navigation From North Hallway - Dim with Pedestrians"
-      - "Hospital Lobby Navigation From North Hallway - Dim without Pedestrians"
-      - "Hospital Lobby Navigation From North Hallway - Dark with Pedestrians"
-      - "Hospital Lobby Navigation From North Hallway - Dark without Pedestrians"
-      - "Hospital Lobby Navigation To North Hallway - Bright with Pedestrians"
-      - "Hospital Lobby Navigation To North Hallway - Bright without Pedestrians"
-      - "Hospital Lobby Navigation To North Hallway - Dim with Pedestrians"
-      - "Hospital Lobby Navigation To North Hallway - Dim without Pedestrians"
-      - "Hospital Lobby Navigation To North Hallway - Dark with Pedestrians"
-      - "Hospital Lobby Navigation To North Hallway - Dark without Pedestrians"
-  - name: "Hospital Demo Smoke"
-    experiences:
-      - "Hospital South Hallway Navigation From Room - Bright without Pedestrians"
-      - "Hospital South Hallway Navigation To Room - Bright without Pedestrians"
-      - "Hospital East Hallway Navigation From North Hallway - Bright without Pedestrians"
-      - "Hospital East Hallway Navigation To North Hallway - Bright without Pedestrians"
-      - "Hospital Lobby Navigation From North Hallway - Bright without Pedestrians"
-      - "Hospital Lobby Navigation To North Hallway - Bright without Pedestrians"
+- name: Hospital Demo
+  experiences:
+  - Hospital South Hallway Navigation From Room - Bright with Pedestrians
+  - Hospital South Hallway Navigation From Room - Bright without Pedestrians
+  - Hospital South Hallway Navigation From Room - Dim with Pedestrians
+  - Hospital South Hallway Navigation From Room - Dim without Pedestrians
+  - Hospital South Hallway Navigation From Room - Dark with Pedestrians
+  - Hospital South Hallway Navigation From Room - Dark without Pedestrians
+  - Hospital South Hallway Navigation To Room - Bright with Pedestrians
+  - Hospital South Hallway Navigation To Room - Bright without Pedestrians
+  - Hospital South Hallway Navigation To Room - Dim with Pedestrians
+  - Hospital South Hallway Navigation To Room - Dim without Pedestrians
+  - Hospital South Hallway Navigation To Room - Dark with Pedestrians
+  - Hospital South Hallway Navigation To Room - Dark without Pedestrians
+  - Hospital East Hallway Navigation From North Hallway - Bright with Pedestrians
+  - Hospital East Hallway Navigation From North Hallway - Bright without Pedestrians
+  - Hospital East Hallway Navigation From North Hallway - Dim with Pedestrians
+  - Hospital East Hallway Navigation From North Hallway - Dim without Pedestrians
+  - Hospital East Hallway Navigation From North Hallway - Dark with Pedestrians
+  - Hospital East Hallway Navigation From North Hallway - Dark without Pedestrians
+  - Hospital East Hallway Navigation To North Hallway - Bright with Pedestrians
+  - Hospital East Hallway Navigation To North Hallway - Bright without Pedestrians
+  - Hospital East Hallway Navigation To North Hallway - Dim with Pedestrians
+  - Hospital East Hallway Navigation To North Hallway - Dim without Pedestrians
+  - Hospital East Hallway Navigation To North Hallway - Dark with Pedestrians
+  - Hospital East Hallway Navigation To North Hallway - Dark without Pedestrians
+  - Hospital Lobby Navigation From North Hallway - Bright with Pedestrians
+  - Hospital Lobby Navigation From North Hallway - Bright without Pedestrians
+  - Hospital Lobby Navigation From North Hallway - Dim with Pedestrians
+  - Hospital Lobby Navigation From North Hallway - Dim without Pedestrians
+  - Hospital Lobby Navigation From North Hallway - Dark with Pedestrians
+  - Hospital Lobby Navigation From North Hallway - Dark without Pedestrians
+  - Hospital Lobby Navigation To North Hallway - Bright with Pedestrians
+  - Hospital Lobby Navigation To North Hallway - Bright without Pedestrians
+  - Hospital Lobby Navigation To North Hallway - Dim with Pedestrians
+  - Hospital Lobby Navigation To North Hallway - Dim without Pedestrians
+  - Hospital Lobby Navigation To North Hallway - Dark with Pedestrians
+  - Hospital Lobby Navigation To North Hallway - Dark without Pedestrians
+- name: Demo Smoke
+  experiences:
+  - Hospital South Hallway Navigation To Room - Bright without Pedestrians
+  - Hospital East Hallway Navigation To North Hallway - Bright without Pedestrians
+  - Hospital Lobby Navigation To North Hallway - Bright without Pedestrians
+  - Warehouse Forklift Navigation
+  - Warehouse Mid Room Navigation
+  - Warehouse Perimeter Navigation
+- name: Warehouse Demo
+  experiences:
+  - Warehouse Forklift Navigation
+  - Warehouse Forklift Navigation Reverse
+  - Warehouse Mid Room Navigation
+  - Warehouse Mid Room Navigation Reverse
+  - Warehouse Perimeter Navigation
+  - Warehouse Perimeter Navigation Reverse

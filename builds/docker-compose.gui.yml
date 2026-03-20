@@ -11,7 +11,8 @@ services:
     volumes:
       - shadercache:/isaac-sim/shadercache
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - /home/mitt/Desktop/hospital_demo/collected_hospital_demo:/tmp/resim/assets/collected_hospital_demo
+      - ../assets:/tmp/resim/assets
+    network_mode: host
   nav2:
     image: resim-humble-nav2
     extends:
@@ -22,8 +23,9 @@ services:
       - DISPLAY=${DISPLAY}
       - RESIM_NAV2_TIMEOUT=3600
     volumes:
-      - ./outputs:/tmp/resim/outputs
+      - ../outputs:/tmp/resim/outputs
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    network_mode: host
 
 volumes:
   shadercache:

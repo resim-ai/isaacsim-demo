@@ -39,7 +39,7 @@ class SetNavigationGoal(Node):
         self.declare_parameter("obstacle_search_distance_in_meters", 0.2)
         self.declare_parameter("frame_id", "map")
         self.declare_parameter("map_yaml_path", "")
-        self.declare_parameter("goal_text_file_path", "")
+        self.declare_parameter("experience_path", "")
         self.declare_parameter("initial_pose", [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0])
         self.declare_parameter("publish_initial_pose", True)
         self.declare_parameter("max_goal_send_retries", 3)
@@ -48,7 +48,10 @@ class SetNavigationGoal(Node):
 
         self.__goal_generator = self.__create_goal_generator()
         action_server_name = self.get_parameter("action_server_name").value
-        self._action_client = ActionClient(self, NavigateToPose, f"{self.get_namespace()}/{action_server_name}")
+        namespace = self.get_namespace()
+        if namespace == "/":
+            namespace = ""
+        self._action_client = ActionClient(self, NavigateToPose, f"{namespace}/{action_server_name}")
 
         self.MAX_ITERATION_COUNT = int(self.get_parameter("iteration_count").value)
         assert self.MAX_ITERATION_COUNT > 0
@@ -182,7 +185,7 @@ class SetNavigationGoal(Node):
         """
         Normalize goal pose arrays to ROS pose fields.
         Preferred format is [x, y, z, qw, qx, qy, qz]. Legacy [x, y, qx, qy, qz, qw]
-        remains supported for random/legacy text goals.
+        remains supported for random goal generation.
         """
         if len(pose) == 7:
             return (pose[0], pose[1], pose[2], pose[4], pose[5], pose[6], pose[3])
@@ -287,11 +290,11 @@ class SetNavigationGoal(Node):
             goal_generator = RandomGoalGenerator(grid_map, obstacle_search_distance_in_meters)
 
         elif goal_generator_type == "GoalReader":
-            if self.get_parameter("goal_text_file_path").value is None:
-                self.get_logger().info("Goal text file path is not given. Returning..")
+            if not self.get_parameter("experience_path").value:
+                self.get_logger().info("Experience path is not given. Returning..")
                 sys.exit(1)
 
-            file_path = self.get_parameter("goal_text_file_path").value
+            file_path = self.get_parameter("experience_path").value
             goal_generator = GoalReader(file_path)
         else:
             self.get_logger().info("Invalid goal generator specified. Returning...")

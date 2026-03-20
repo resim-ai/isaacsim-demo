@@ -5,7 +5,7 @@
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import yaml
 from ament_index_python.packages import get_package_share_directory
@@ -55,42 +55,61 @@ def _coerce_goals_from_yaml(goals: Any) -> List[List[float]]:
     return validated_goals
 
 
+def _coerce_optional_string_field(config: Dict[str, Any], key: str) -> Optional[str]:
+    value = config.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError(f"experience {key} must be a string")
+    return value
+
+
 def load_experience_config(
     *,
+    experience_location: Optional[Union[str, Path]] = None,
     default_initial_pose: Optional[List[float]] = None,
     default_isaacsim_entity: str = "",
 ) -> Dict[str, Any]:
-    """Resolve experience config from /tmp/resim/test_config.json or package defaults."""
-    experience_location = resolve_experience_location()
-    if not experience_location.exists():
-        raise FileNotFoundError(f"Experience file not found: {experience_location}")
-    suffix = experience_location.suffix.lower()
+    """Resolve experience config from an explicit path, /tmp/resim/test_config.json, or package defaults."""
+    resolved_experience_location = (
+        Path(experience_location) if experience_location is not None else resolve_experience_location()
+    )
+    if not resolved_experience_location.exists():
+        raise FileNotFoundError(f"Experience file not found: {resolved_experience_location}")
+    suffix = resolved_experience_location.suffix.lower()
 
     if suffix not in (".yaml", ".yml"):
         raise ValueError(
-            f"Unsupported experience file '{experience_location}'. "
+            f"Unsupported experience file '{resolved_experience_location}'. "
             "Only .yaml/.yml experience files are supported."
         )
 
-    with experience_location.open("r", encoding="utf-8") as experience_file:
+    with resolved_experience_location.open("r", encoding="utf-8") as experience_file:
         config = yaml.safe_load(experience_file) or {}
     if not isinstance(config, dict):
-        raise ValueError(f"Experience file must contain a YAML mapping: {experience_location}")
+        raise ValueError(f"Experience file must contain a YAML mapping: {resolved_experience_location}")
 
     if "initial_pose" not in config and default_initial_pose is None:
-        raise ValueError(f"Missing 'initial_pose' in experience file: {experience_location}")
+        raise ValueError(f"Missing 'initial_pose' in experience file: {resolved_experience_location}")
 
     goals = _coerce_goals_from_yaml(config.get("goals"))
     goal_count = len(goals)
     initial_pose = _validate_initial_pose(config.get("initial_pose", default_initial_pose))
     isaacsim_entity = str(config.get("isaacsim_entity", default_isaacsim_entity))
     world_uri = str(config.get("world_uri", ""))
+    namespace = _coerce_optional_string_field(config, "namespace")
+    nav2_params_file = _coerce_optional_string_field(config, "nav2_params_file")
+    map_file = _coerce_optional_string_field(config, "map_file")
+    rviz_config_file = _coerce_optional_string_field(config, "rviz_config_file")
 
     return {
-        "experience_path": str(experience_location),
-        "goals_path": str(experience_location),
+        "experience_path": str(resolved_experience_location),
         "goal_count": goal_count,
         "initial_pose": initial_pose,
         "isaacsim_entity": isaacsim_entity,
         "world_uri": world_uri,
+        "namespace": namespace,
+        "nav2_params_file": nav2_params_file,
+        "map_file": map_file,
+        "rviz_config_file": rviz_config_file,
     }

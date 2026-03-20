@@ -53,9 +53,11 @@ class MetricsEmitter(Node):
         # State for distance to goal metric
         self.current_goal: Optional[PoseStamped] = None
         self.transformed_goal: Optional[Pose] = None
+        self.active_goal_number: Optional[int] = None
         
         # State for goal completion tracking
         self.goal_count = 0
+        self.new_goal_count = 0
         self.completed_goals = 0
         
         # State for pose difference metric
@@ -90,6 +92,7 @@ class MetricsEmitter(Node):
         """Handle new goal messages."""
         self.current_goal = msg
         self.goal_count += 1
+        self.active_goal_number = self.goal_count
         
         self.get_logger().info(f"New goal received (#{self.goal_count}) at time {msg.header.stamp.sec}.{msg.header.stamp.nanosec} in frame: {msg.header.frame_id}")
         
@@ -129,7 +132,13 @@ class MetricsEmitter(Node):
             return
 
         if msg.status == "NEW_GOAL":
-            active_goal_number = max(1, self.completed_goals + 1)
+            self.new_goal_count += 1
+
+            # Every NEW_GOAL after the first means the previous goal just finished.
+            if self.new_goal_count > 1:
+                self._emit_goal_completion(relative_timestamp)
+
+            active_goal_number = max(1, self.new_goal_count)
             self.emitter.emit('goal_status', {
                 "state": f"Navigating: Goal {active_goal_number}",
             }, timestamp=relative_timestamp)
@@ -139,17 +148,38 @@ class MetricsEmitter(Node):
             self.get_logger().debug(f"Ignoring unknown goal status: {msg.status}")
             return
 
-        # Ignore duplicate COMPLETE messages once all known goals are already marked complete.
-        if self.goal_count > 0 and self.completed_goals >= self.goal_count:
+        total_goals = max(self.goal_count, self.new_goal_count)
+        if total_goals == 0:
+            self.get_logger().warn("Received COMPLETE before any goals were observed.")
+            return
+
+        # COMPLETE is only published once, after the final goal succeeds.
+        if self.completed_goals >= total_goals:
             self.get_logger().warn("Received duplicate COMPLETE status after all goals were already complete.")
             return
 
-        self.completed_goals += 1
-        reached_goal_number = self.completed_goals
         self.emitter.emit('goal_status', {
             "state": "Idle",
         }, timestamp=relative_timestamp)
 
+        reached_goal_number = self._emit_goal_completion(relative_timestamp)
+        if reached_goal_number is not None:
+            self.get_logger().info(f"Final goal reached! Total time: {relative_timestamp / 1e9:.2f}s")
+
+    def _emit_goal_completion(self, relative_timestamp: int) -> Optional[int]:
+        """Emit metrics for the next sequentially completed goal."""
+        reached_goal_number = self.completed_goals + 1
+        if reached_goal_number > len(self.goal_start_times):
+            self.get_logger().warn(
+                "Cannot calculate goal completion: missing start time for goal "
+                f"{reached_goal_number}"
+            )
+            return None
+
+        self.completed_goals = reached_goal_number
+        if self.active_goal_number == reached_goal_number:
+            self.active_goal_number = None
+            self.transformed_goal = None
         self.emitter.emit_event('goal_reached', {
             'name': f'Goal {reached_goal_number} Reached',
             'description': f'Robot successfully reached goal number {reached_goal_number}',
@@ -157,15 +187,10 @@ class MetricsEmitter(Node):
             'tags': ['navigation']
         }, timestamp=relative_timestamp)
 
-        start_time: Optional[Time] = None
-        if 0 < reached_goal_number <= len(self.goal_start_times):
-            start_time = self.goal_start_times[reached_goal_number - 1]
-        elif self.prev_goal_received_time is not None:
-            start_time = self.prev_goal_received_time
-
-        if start_time is None or self.first_goal_received_time is None:
-            self.get_logger().warn("Cannot calculate time to goal: missing timestamp data")
-            return
+        start_time = self.goal_start_times[reached_goal_number - 1]
+        if self.first_goal_received_time is None:
+            self.get_logger().warn("Cannot calculate time to goal: missing first goal timestamp")
+            return reached_goal_number
 
         start_relative_ns = max(
             0, start_time.nanoseconds - self.first_goal_received_time.nanoseconds
@@ -176,14 +201,8 @@ class MetricsEmitter(Node):
             'goal_name': f'Goal {reached_goal_number}'
         }, timestamp=relative_timestamp)
 
-        self.get_logger().info(f"Goal {reached_goal_number} completed with status: {msg.status}")
-
-        if self.goal_count > 0 and reached_goal_number >= self.goal_count:
-            self.get_logger().info(f"Final goal reached! Total time: {relative_timestamp / 1e9:.2f}s")
-        else:
-            self.emitter.emit('goal_status', {
-                "state": f"Navigating: Goal {reached_goal_number + 1}",
-            }, timestamp=relative_timestamp)
+        self.get_logger().info(f"Goal {reached_goal_number} completed.")
+        return reached_goal_number
 
     def chassis_odom_callback(self, msg: Odometry):
         """Handle odometry messages and calculate distance to goal at 10Hz."""
@@ -191,7 +210,12 @@ class MetricsEmitter(Node):
         self.latest_odom = msg
         
         # Only calculate distance if we have a transformed goal
-        if self.transformed_goal is None or self.first_goal_received_time is None or self.prev_goal_received_time is None:
+        if (
+            self.transformed_goal is None
+            or self.active_goal_number is None
+            or self.first_goal_received_time is None
+            or self.prev_goal_received_time is None
+        ):
             return
 
         try:
@@ -221,8 +245,11 @@ class MetricsEmitter(Node):
                 return
             
             # Emit the distance metric
-            active_goal_number = max(1, min(self.goal_count, self.completed_goals + 1))
-            self.emitter.emit('goal_distance', {'distance_m': distance, 'goal_name': f'Goal {active_goal_number}'}, timestamp=relative_timestamp)
+            self.emitter.emit(
+                'goal_distance',
+                {'distance_m': distance, 'goal_name': f'Goal {self.active_goal_number}'},
+                timestamp=relative_timestamp
+            )
             
             # Update the last processed time for rate limiting
             self.last_odom_processed_time = current_time

@@ -1,5 +1,26 @@
-initial_pose: [11.5, 6.0, 0.0, 1.0, 0.0, 0.0, 0.0]
-isaacsim_entity: "/World/Nova_Carter_ROS_1"
+name: Warehouse Forklift Navigation
+description: Robot navigates from north of warehouse around the forklift.
+initial_pose: [-6.0, -1.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+isaacsim_entity: "/World/Nova_Carter_ROS"
 goals:
-  - [24.0, 24.0, 0.0, -0.70711, 0.0, 0.0, 0.70711]
-world_uri: "/tmp/resim/assets/collected_hospital_demo/hospital_demo_one_robot_ped_bright.usda"
+  - [-7.4, -9.4, 0.0, 1.0, 0.0, 0.0, 0.0]
+  - [5.7, -8.9, 0.0, 0.86, 0.0, 0.0, 0.4]
+  - [6.62, 12.93, 0.0, 0.47, 0.0, 0.0, 0.87]
+world_uri: "/tmp/resim/assets/carter_warehouse_navigation_collected/carter_warehouse_navigation.usd"
+namespace: ""
+nav2_params_file: carter_navigation_warehouse_params.yaml
+map_file: carter_warehouse_navigation.yaml
+rviz_config_file: carter_navigation.rviz
+customFields:
+- name: Building
+  type: text
+  values:
+  - Warehouse
+- name: Lighting
+  type: text
+  values:
+  - Bright
+- name: Pedestrians
+  type: text
+  value:
+  - No

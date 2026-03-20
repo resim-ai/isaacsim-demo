@@ -12,7 +12,7 @@ SHELL ["/bin/bash", "-c"]
 # frequently than other code.
 
 COPY humble_ws/src/isaacsim/package.xml ./src/isaacsim/package.xml
-COPY humble_ws/src/checklist/package.xml ./src/checklist/package.xml
+COPY humble_ws/src/resim_isaac_control/package.xml ./src/resim_isaac_control/package.xml
 COPY humble_ws/src/isaac_ros2_messages/package.xml ./src/isaac_ros2_messages/package.xml
 COPY humble_ws/src/metrics_emitter/package.xml ./src/metrics_emitter/package.xml
 COPY humble_ws/src/navigation/carter_navigation/package.xml ./src/navigation/carter_navigation/package.xml
@@ -43,5 +43,7 @@ RUN source /opt/ros/humble/setup.bash && colcon build
 COPY builds/nav2/experiences /experiences
 COPY builds/nav2/entrypoint.sh /
 COPY /.resim/metrics/config.resim.yml ./resim_metrics_config.resim.yml
+
+WORKDIR /
 
 ENTRYPOINT ["/entrypoint.sh"]

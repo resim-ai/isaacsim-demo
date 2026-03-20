@@ -7,13 +7,15 @@ services:
     image: resim-isaacsim
     volumes:
       - shadercache:/isaac-sim/shadercache
+      - ../assets:/tmp/resim/assets
+    network_mode: host
   nav2:
     extends:
       file: docker-compose.yml
       service: nav2
     image: resim-humble-nav2
     volumes:
-      - ./outputs:/tmp/resim/outputs
-
+      - ../outputs:/tmp/resim/outputs
+    network_mode: host
 volumes:
   shadercache:

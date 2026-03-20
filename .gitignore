@@ -15,3 +15,5 @@ build_ws/humble
 # Emacs
 *~
 .#*
+
+__pycache__/

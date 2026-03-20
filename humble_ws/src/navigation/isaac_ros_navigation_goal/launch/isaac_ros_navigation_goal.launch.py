@@ -15,8 +15,9 @@
 
 import os
 from ament_index_python.packages import get_package_share_directory
-from isaac_ros_navigation_goal.experience_config import load_experience_config
 from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument
+from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch.actions import RegisterEventHandler, Shutdown
@@ -31,11 +32,8 @@ def exit_handler(event: ProcessExited, context: LaunchContext):
 
 def generate_launch_description():
     use_sim_time = LaunchConfiguration("use_sim_time", default=True)
-    experience_config = load_experience_config(
-        default_initial_pose=[-6.4, -1.04, 0.0, 0.02, 0.0, 0.0, 0.99]
-    )
-
     namespace = LaunchConfiguration("namespace", default="carter1")
+    shutdown_on_exit = LaunchConfiguration("shutdown_on_exit", default="true")
 
     map_yaml_file = LaunchConfiguration(
         "map_yaml_path",
@@ -44,15 +42,16 @@ def generate_launch_description():
         ),
     )
 
-    goal_text_file = LaunchConfiguration(
-        "goal_text_file_path",
-        default=experience_config["goals_path"],
+    experience_path = LaunchConfiguration(
+        "experience_path",
+        default="",
     )
 
     initial_pose = LaunchConfiguration(
         "initial_pose",
-        default=str(experience_config["initial_pose"]),
+        default="[0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0]",
     )
+    goal_count = LaunchConfiguration("goal_count", default="1")
     publish_initial_pose = LaunchConfiguration("publish_initial_pose", default="true")
 
     navigation_goal_node = Node(
@@ -63,11 +62,11 @@ def generate_launch_description():
         parameters=[
             {
                 "map_yaml_path": map_yaml_file,
-                "iteration_count": experience_config["goal_count"],
+                "iteration_count": goal_count,
                 "goal_generator_type": "GoalReader",
                 "action_server_name": "navigate_to_pose",
                 "obstacle_search_distance_in_meters": 0.2,
-                "goal_text_file_path": goal_text_file,
+                "experience_path": experience_path,
                 "initial_pose": initial_pose,
                 "publish_initial_pose": publish_initial_pose,
                 "use_sim_time": use_sim_time,
@@ -81,11 +80,23 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
+        DeclareLaunchArgument(
+            "shutdown_on_exit",
+            default_value="true",
+            description="Shut down the launch system when goal node exits",
+        ),
+        DeclareLaunchArgument(
+            "experience_path",
+            default_value="",
+            description="Path to the experience YAML file",
+        ),
+        DeclareLaunchArgument("goal_count", default_value="1", description="Number of goals to execute"),
         navigation_goal_node,
         RegisterEventHandler(
             OnProcessExit(
                 target_action=navigation_goal_node,
                 on_exit=exit_handler
-            )
+            ),
+            condition=IfCondition(shutdown_on_exit),
         )
     ])
