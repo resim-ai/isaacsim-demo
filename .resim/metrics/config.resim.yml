@@ -294,7 +294,7 @@ metrics:
     template_type: system
     template: image
   Goal Dwelling Time:
-    type: test
+    type: batch
     description: Time spent within 0.5m of each goal for each job
     query_string: |
       WITH dwelling_periods AS (
@@ -345,7 +345,7 @@ metrics:
     template: bar
     skip_if_no_data: true
   Aggregated Localization Error:
-    type: test
+    type: batch
     description: Position difference between odometry and AMCL localization across all experiences.
     query_string: |
       SELECT
