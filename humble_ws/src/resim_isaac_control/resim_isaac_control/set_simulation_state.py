@@ -5,12 +5,15 @@
 # https://opensource.org/licenses/MIT.
 
 import sys
+from pathlib import Path
 
 import rclpy
 from rclpy.node import Node
 from simulation_interfaces.msg import Result, SimulationState
 from simulation_interfaces.srv import SetSimulationState
 
+
+READY_PATH = Path("/tmp/isaac_ready")
 
 STATE_NAME_TO_ENUM = {
     "playing": SimulationState.STATE_PLAYING,
@@ -61,6 +64,8 @@ class SetSimulationStateNode(Node):
             return False
 
         self.get_logger().info(f"Isaac Sim is now {target_state_name.upper()}.")
+        if target_state == SimulationState.STATE_PLAYING:
+            READY_PATH.touch()
         return True
 
 

@@ -22,6 +22,7 @@ class IsaacReady(Node):
     def __init__(self, future):
         super().__init__("isaac_ready")
         self.future = future
+        READY_PATH.unlink(missing_ok=True)
         self.declare_parameter("initial_pose", [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0])
         self.declare_parameter("isaacsim_entity", "")
         self.declare_parameter("world_uri", "")
@@ -61,7 +62,6 @@ class IsaacReady(Node):
             return
 
         self.get_logger().info("Isaac ready checks finished: world loaded and robot pose set.")
-        READY_PATH.touch()
         self.future.set_result(True)
 
     def _wait_for_services(self) -> bool:

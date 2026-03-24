@@ -21,6 +21,11 @@ class MetricsEmitter(Node):
         self.get_logger().info('Metrics emitter node initialized')
 
         self.emitter = Emitter(config_path=Path("/humble_ws/resim_metrics_config.resim.yml"))
+        self.declare_parameter("goal_count", 0)
+        self.expected_goal_count = max(
+            0,
+            self.get_parameter("goal_count").get_parameter_value().integer_value,
+        )
 
         # build transform buffer
         self.tf_buffer = Buffer()
@@ -56,7 +61,7 @@ class MetricsEmitter(Node):
         self.active_goal_number: Optional[int] = None
         
         # State for goal completion tracking
-        self.goal_count = 0
+        self.observed_goal_count = 0
         self.new_goal_count = 0
         self.completed_goals = 0
         
@@ -66,6 +71,16 @@ class MetricsEmitter(Node):
         # Rate limiting for odometry processing (10Hz = 0.1 seconds)
         self.odom_processing_rate = 0.1  # seconds between processing
         self.last_odom_processed_time: Optional[Time] = None
+
+        if self.expected_goal_count > 0:
+            self.emitter.emit("goal_count", {"count": self.expected_goal_count}, timestamp=0)
+            self.get_logger().info(
+                f"Emitted expected goal count: {self.expected_goal_count}"
+            )
+        else:
+            self.get_logger().warn(
+                "No expected goal_count parameter provided; final-goal metrics may fall back to failure."
+            )
 
     def get_relative_timestamp(self, msg_time: Optional[MsgTime] = None) -> Optional[int]:
         """
@@ -91,10 +106,10 @@ class MetricsEmitter(Node):
     def goal_callback(self, msg: PoseStamped):
         """Handle new goal messages."""
         self.current_goal = msg
-        self.goal_count += 1
-        self.active_goal_number = self.goal_count
+        self.observed_goal_count += 1
+        self.active_goal_number = self.observed_goal_count
         
-        self.get_logger().info(f"New goal received (#{self.goal_count}) at time {msg.header.stamp.sec}.{msg.header.stamp.nanosec} in frame: {msg.header.frame_id}")
+        self.get_logger().info(f"New goal received (#{self.observed_goal_count}) at time {msg.header.stamp.sec}.{msg.header.stamp.nanosec} in frame: {msg.header.frame_id}")
         
         # Store the first goal received time
         new_goal_time = Time.from_msg(msg.header.stamp)
@@ -116,9 +131,13 @@ class MetricsEmitter(Node):
             
             # Transform the pose
             pose_stamped_transformed = tf2_geometry_msgs.do_transform_pose_stamped(msg, transform)
-            self.transformed_goal = pose_stamped_transformed.pose
+            transformed_goal = pose_stamped_transformed.pose
+            self.transformed_goal = transformed_goal
             
-            self.get_logger().info(f"Goal transformed to odom frame: x={self.transformed_goal.position.x:.2f}, y={self.transformed_goal.position.y:.2f}")
+            self.get_logger().info(
+                f"Goal transformed to odom frame: x={transformed_goal.position.x:.2f}, "
+                f"y={transformed_goal.position.y:.2f}"
+            )
             
         except Exception as ex:
             self.get_logger().warn(f'Could not transform goal to odom frame: {ex}')
@@ -148,7 +167,7 @@ class MetricsEmitter(Node):
             self.get_logger().debug(f"Ignoring unknown goal status: {msg.status}")
             return
 
-        total_goals = max(self.goal_count, self.new_goal_count)
+        total_goals = max(self.observed_goal_count, self.new_goal_count)
         if total_goals == 0:
             self.get_logger().warn("Received COMPLETE before any goals were observed.")
             return

@@ -160,7 +160,12 @@ def launch_setup(context):
         executable="metrics_emitter",
         output="screen",
         namespace=namespace,
-        parameters=[{"use_sim_time": use_sim_time}],
+        parameters=[
+            {
+                "use_sim_time": use_sim_time,
+                "goal_count": experience_config["goal_count"],
+            }
+        ],
         remappings=(
             [
                 ("/tf", f"/{namespace}/tf"),

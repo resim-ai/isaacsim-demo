@@ -15,6 +15,9 @@ topics:
       description: string
       status: status
       tags: string[]
+  goal_count:
+    schema:
+      count: int
   time_to_goal:
     schema:
       time_s: float
@@ -69,17 +72,33 @@ metrics:
     type: test
     description: Time between receiving first goal and reaching final goal; blocks if goal is not reached within 75 seconds.
     query_string: |
-      SELECT 
-        CASE 
-          WHEN (SELECT COUNT(*) FROM time_to_goal) != 1 THEN 75
-          ELSE sum(time_s)
+      WITH expected AS (
+        SELECT COALESCE(MAX(count), 0) AS expected_goal_count
+        FROM goal_count
+      )
+      SELECT
+        CASE
+          WHEN (SELECT expected_goal_count FROM expected) = 0 THEN 75
+          WHEN (SELECT COUNT(*) FROM time_to_goal) != (SELECT expected_goal_count FROM expected) THEN 75
+          ELSE SUM(time_s)
         END
       FROM time_to_goal;
     template_type: system
     template: scalar
     units: seconds
     status:
-      query_string: SELECT '1' FROM time_to_goal HAVING COUNT(*) < ?
+      query_string: |
+        WITH expected AS (
+          SELECT COALESCE(MAX(count), 0) AS expected_goal_count
+          FROM goal_count
+        )
+        SELECT '1'
+        FROM expected
+        WHERE CASE
+          WHEN expected_goal_count = 0 THEN 1
+          WHEN (SELECT COUNT(*) FROM time_to_goal) != expected_goal_count THEN 1
+          ELSE 0
+        END = ?;
       block: 1
   Goal Status:
     type: test
@@ -185,19 +204,95 @@ metrics:
     type: batch
     description: Sum of all 'Time to reach final goal' metrics across all experiences.
     query_string: |
-      SELECT SUM(
-        CASE WHEN goal_count != 1 THEN 75 ELSE total_time END
+      WITH per_job AS (
+        SELECT
+          gc.job_id,
+          MAX(gc.count) AS expected_goal_count,
+          COUNT(ttg.time_s) AS completed_goal_count,
+          COALESCE(SUM(ttg.time_s), 0) AS total_time
+        FROM goal_count gc
+        LEFT JOIN time_to_goal ttg ON gc.job_id = ttg.job_id
+        GROUP BY gc.job_id
       )
-      FROM (
-        SELECT job_id,
-          COUNT(*) as goal_count,
-          SUM(time_s) as total_time
-        FROM time_to_goal
-        GROUP BY job_id
-      ) per_job;
+      SELECT SUM(
+        CASE
+          WHEN completed_goal_count != expected_goal_count THEN 75
+          ELSE total_time
+        END
+      )
+      FROM per_job;
     template_type: system
     template: scalar
     units: seconds
+  Time to complete (with vs without pedestrians):
+    type: batch
+    description: Mean time to reach the final goal, compared between scenarios with pedestrians and without (using custom field Pedestrians).
+    query_string: |
+      WITH per_job AS (
+        SELECT
+          gc.job_id,
+          CASE
+            WHEN COUNT(ttg.time_s) != MAX(gc.count) THEN 75
+            ELSE COALESCE(SUM(ttg.time_s), 0)
+          END AS total_time
+        FROM goal_count gc
+        LEFT JOIN time_to_goal ttg ON gc.job_id = ttg.job_id
+        GROUP BY gc.job_id
+      ),
+      with_ped_field AS (
+        SELECT
+          pj.job_id,
+          pj.total_time,
+          m.custom_field_values[array_position(m.custom_field_keys, 'Pedestrians')] AS pedestrians
+        FROM per_job pj
+        JOIN metadata m ON pj.job_id = m.job_id
+        WHERE contains(m.custom_field_keys, 'Pedestrians')
+      )
+      SELECT
+        'Time to complete' AS group_name,
+        CASE WHEN pedestrians = 'Yes' THEN 'With Pedestrians' ELSE 'Without Pedestrians' END AS "Scenario",
+        ROUND(AVG(total_time), 1) AS "Mean Time (s)"
+      FROM with_ped_field
+      GROUP BY CASE WHEN pedestrians = 'Yes' THEN 'With Pedestrians' ELSE 'Without Pedestrians' END
+      ORDER BY "Scenario";
+    template_type: system
+    template: bar
+  Camera feed (bright scenes):
+    type: batch
+    description: All camera GIFs from scenarios with Lighting = Bright.
+    query_string: |
+      SELECT cg.filename
+      FROM camera_gif cg
+      JOIN metadata m ON cg.job_id = m.job_id
+      WHERE contains(m.custom_field_keys, 'Lighting')
+        AND m.custom_field_values[array_position(m.custom_field_keys, 'Lighting')] = 'Bright'
+      ORDER BY m.experience_name;
+    template_type: system
+    template: image
+  Camera feed (dim scenes):
+    type: batch
+    description: All camera GIFs from scenarios with Lighting = Dim.
+    query_string: |
+      SELECT cg.filename
+      FROM camera_gif cg
+      JOIN metadata m ON cg.job_id = m.job_id
+      WHERE contains(m.custom_field_keys, 'Lighting')
+        AND m.custom_field_values[array_position(m.custom_field_keys, 'Lighting')] = 'Dim'
+      ORDER BY m.experience_name;
+    template_type: system
+    template: image
+  Camera feed (dark scenes):
+    type: batch
+    description: All camera GIFs from scenarios with Lighting = Dark.
+    query_string: |
+      SELECT cg.filename
+      FROM camera_gif cg
+      JOIN metadata m ON cg.job_id = m.job_id
+      WHERE contains(m.custom_field_keys, 'Lighting')
+        AND m.custom_field_values[array_position(m.custom_field_keys, 'Lighting')] = 'Dark'
+      ORDER BY m.experience_name;
+    template_type: system
+    template: image
   Goal Dwelling Time:
     type: batch
     description: Time spent within 0.5m of each goal for each job
@@ -223,6 +318,28 @@ metrics:
       ORDER BY experience_name, goal_name;
     template_type: system
     template: bar
+  Pedestrian proximity incidents:
+    type: batch
+    description: For each named pedestrian, number of experiences (scenes) where they were hit (distance <0.5 m) or too close (0.5–1 m) to the robot; at most one count per experience.
+    query_string: |
+      WITH per_experience AS (
+        SELECT job_id, person_name,
+          count_if(distance_m < 0.5) > 0 AS was_hit,
+          count_if(distance_m >= 0.5 AND distance_m < 1) > 0 AS was_too_close
+        FROM nearest_human_distance
+        GROUP BY job_id, person_name
+      )
+      SELECT 'Hit (<0.5 m)' AS group_name, person_name AS "Pedestrian", count_if(was_hit) AS "Count"
+      FROM per_experience
+      GROUP BY person_name
+      UNION ALL
+      SELECT 'Too close (0.5–1 m)' AS group_name, person_name AS "Pedestrian", count_if(was_too_close) AS "Count"
+      FROM per_experience
+      GROUP BY person_name
+      ORDER BY group_name, "Pedestrian";
+    template_type: system
+    template: bar
+    skip_if_no_data: true
   Maximum Localization Error:
     type: batch
     description: Maximum position difference between odometry and AMCL localization across all experiences.
@@ -272,5 +389,10 @@ metrics sets:
       # Batch metrics
       - Goal Dwelling Time
       - Total time to reach final Goal
+      - Time to complete (with vs without pedestrians)
+      - Camera feed (bright scenes)
+      - Camera feed (dim scenes)
+      - Camera feed (dark scenes)
+      - Pedestrian proximity incidents
       - Maximum Localization Error
       - AMCL Covariance Calibration Summary
