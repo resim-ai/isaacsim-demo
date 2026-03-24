@@ -261,7 +261,7 @@ metrics:
     type: batch
     description: All camera GIFs from scenarios with Lighting = Bright.
     query_string: |
-      SELECT cg.filename
+      SELECT m.experience_name, cg.job_id
       FROM camera_gif cg
       JOIN metadata m ON cg.job_id = m.job_id
       WHERE contains(m.custom_field_keys, 'Lighting')
@@ -273,7 +273,7 @@ metrics:
     type: batch
     description: All camera GIFs from scenarios with Lighting = Dim.
     query_string: |
-      SELECT cg.filename
+      SELECT m.experience_name, cg.job_id
       FROM camera_gif cg
       JOIN metadata m ON cg.job_id = m.job_id
       WHERE contains(m.custom_field_keys, 'Lighting')
@@ -285,7 +285,7 @@ metrics:
     type: batch
     description: All camera GIFs from scenarios with Lighting = Dark.
     query_string: |
-      SELECT cg.filename
+      SELECT m.experience_name, cg.job_id
       FROM camera_gif cg
       JOIN metadata m ON cg.job_id = m.job_id
       WHERE contains(m.custom_field_keys, 'Lighting')
@@ -294,30 +294,34 @@ metrics:
     template_type: system
     template: image
   Goal Dwelling Time:
-    type: batch
+    type: test
     description: Time spent within 0.5m of each goal for each job
     query_string: |
-      SELECT 
-        goal_name as "Goal Name",
-        experience_name as "Experience Name",
-        SUM(time_diff) as "Dwelling Time (s)"
-      FROM (
-        SELECT 
+      WITH dwelling_periods AS (
+        SELECT
+          goal_name AS group_name,
           m.experience_name,
-          goal_name,
-          CASE 
-            WHEN distance_m <= 0.5 AND LAG(timestamp / 1E9) OVER (PARTITION BY m.experience_name, goal_name ORDER BY timestamp) IS NOT NULL
-            THEN (timestamp / 1E9) - LAG(timestamp / 1E9) OVER (PARTITION BY m.experience_name, goal_name ORDER BY timestamp)
-            ELSE 0 
-          END as time_diff
+          CASE
+            WHEN LAG(timestamp) OVER (PARTITION BY m.experience_name, goal_name ORDER BY timestamp) IS NOT NULL
+            THEN (timestamp - LAG(timestamp) OVER (PARTITION BY m.experience_name, goal_name ORDER BY timestamp)) / 1E9
+            ELSE 0
+          END AS time_diff
         FROM goal_distance gd
-        JOIN metadata m on gd.job_id = m.job_id
+        JOIN metadata m ON gd.job_id = m.job_id
         WHERE distance_m <= 0.5
-      ) dwelling_periods
-      GROUP BY experience_name, goal_name
-      ORDER BY experience_name, goal_name;
-    template_type: system
-    template: bar
+      )
+      SELECT
+        group_name,
+        'Goal Number' AS y_title,
+        'Dwelling Time (s)' AS x_title,
+        CAST(ROUND(SUM(time_diff), 3) AS DOUBLE) AS x_values,
+        experience_name AS customdata
+      FROM dwelling_periods
+      WHERE group_name IS NOT NULL
+      GROUP BY group_name, experience_name
+      ORDER BY CAST(regexp_extract(group_name, '([0-9]+)$', 1) AS INTEGER), experience_name;
+    template_type: custom
+    template_file: strip.liquid
   Pedestrian proximity incidents:
     type: batch
     description: For each named pedestrian, number of experiences (scenes) where they were hit (distance <0.5 m) or too close (0.5–1 m) to the robot; at most one count per experience.
@@ -340,12 +344,22 @@ metrics:
     template_type: system
     template: bar
     skip_if_no_data: true
-  Maximum Localization Error:
-    type: batch
-    description: Maximum position difference between odometry and AMCL localization across all experiences.
-    query_string: SELECT 'Maximum', m.experience_name as "Experience Name", MAX(position_diff_m) as "Maximum Localization Error (m)" FROM pose_difference pd JOIN metadata m on pd.job_id = m.job_id GROUP BY m.experience_name ORDER BY m.experience_name
-    template_type: system
-    template: bar
+  Aggregated Localization Error:
+    type: test
+    description: Position difference between odometry and AMCL localization across all experiences.
+    query_string: |
+      SELECT
+        'Maximum' AS group_name,
+        'Type' AS y_title,
+        'Localization Error (m)' AS x_title,
+        MAX(position_diff_m) AS x_values,
+        m.experience_name AS customdata
+      FROM pose_difference pd
+      JOIN metadata m ON pd.job_id = m.job_id
+      GROUP BY m.experience_name
+      ORDER BY m.experience_name;
+    template_type: custom
+    template_file: strip.liquid
   AMCL Covariance Calibration Summary:
     type: batch
     description: Statistical assessment of covariance matrix calibration across all experiences.
@@ -394,5 +408,5 @@ metrics sets:
       - Camera feed (dim scenes)
       - Camera feed (dark scenes)
       - Pedestrian proximity incidents
-      - Maximum Localization Error
+      - Aggregated Localization Error
       - AMCL Covariance Calibration Summary
