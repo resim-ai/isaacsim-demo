@@ -17,7 +17,7 @@
       {% assign goal_customdata_started = false %}
       {% for value in customdata %}
         {% if group_name[forloop.index0] == goal %}
-          {% if goal_customdata_started %}, {% endif %}{{ value | json }}
+          {% if goal_customdata_started %}, {% endif %}"{{ value }}"
           {% assign goal_customdata_started = true %}
         {% endif %}
       {% endfor %}
@@ -29,7 +29,7 @@
       "hoveron": "points",
       "hovertemplate": "{{ y_title[0] }}=%{fullData.name}<br>{{ x_title[0] }}=%{x}<br>%{customdata}<extra></extra>",
       "x": [{{ goal_x_values | strip }}],
-      "customdata": [{{ goal_customdata | strip }}],
+      "customdata": [{{ goal_customdata | strip }}], 
       "pointpos": 0,
       "line": {"color": "rgba(255,255,255,0)"},
       "fillcolor": "rgba(255,255,255,0)",

@@ -269,6 +269,7 @@ metrics:
       ORDER BY m.experience_name;
     template_type: system
     template: image
+    skip_if_no_data: true
   Camera feed (dim scenes):
     type: batch
     description: All camera GIFs from scenarios with Lighting = Dim.
@@ -281,6 +282,7 @@ metrics:
       ORDER BY m.experience_name;
     template_type: system
     template: image
+    skip_if_no_data: true
   Camera feed (dark scenes):
     type: batch
     description: All camera GIFs from scenarios with Lighting = Dark.
@@ -293,6 +295,7 @@ metrics:
       ORDER BY m.experience_name;
     template_type: system
     template: image
+    skip_if_no_data: true
   Goal Dwelling Time:
     type: batch
     description: Time spent within 0.5m of each goal for each job
