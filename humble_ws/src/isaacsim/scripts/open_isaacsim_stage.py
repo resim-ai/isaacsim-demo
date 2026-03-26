@@ -22,6 +22,7 @@ import asyncio
 import omni.client
 import omni.kit.async_engine
 import omni.timeline
+import isaacsim.core.experimental.utils.stage as stage_utils
 
 def main():
     parser = argparse.ArgumentParser()
@@ -61,17 +62,19 @@ async def open_stage_async(path: str, start_on_play: bool):
             (success, error) = await layers.get_live_syncing().open_stage_with_live_session_async(path)
         else:
             # Otherwise, use normal stage open.
-            (success, error) = await omni.usd.get_context().open_stage_async(path)
+            (success, _stage) = await stage_utils.open_stage_async(path)
+            print("stage opened")
         
         if not success:
-            carb.log_error(f"Failed to open stage {path}: {error}.")
+            carb.log_error(f"Failed to open stage {path}.")
         else:
             if timeline_interface is not None:
                 await omni.kit.app.get_app().next_update_async()
-                await omni.kit.app.get_app().next_update_async()
                 timeline_interface.play()
+                await omni.kit.app.get_app().next_update_async()
                 print("Stage loaded and simulation is playing.")
             pass
+    
     result, _ = await omni.client.stat_async(path)
     if result == omni.client.Result.OK:
         await _open_stage_internal(path)

@@ -1,0 +1,32 @@
+name: Hospital South Hallway Navigation From Room - Dim without Pedestrians
+description: Robot navigates from patient room to lobby in dim environment without pedestrians.
+initial_pose: [24.0, 24.0, 0.0, 0.70711, 0.0, 0.0, 0.70711]
+isaacsim_entity: /World/Nova_Carter_ROS_1
+namespace: carter1
+nav2_params_file: carter_navigation_hospital_params.yaml
+map_file: carter_hospital_navigation.yaml
+rviz_config_file: carter_navigation_namespaced.rviz
+goals:
+- [11.5, 6.0, 0.0, 0.0, 0.0, 0.0, -1.0]
+world_uri: /tmp/resim/assets/collected_hospital_demo/hospital_demo_one_robot_no_ped_mid.usda
+customFields:
+- name: Building
+  type: text
+  values:
+  - Hospital
+- name: Lighting
+  type: text
+  values:
+  - Dim
+- name: Pedestrians
+  type: text
+  value:
+  - 'No'
+- name: Area
+  type: text
+  values:
+  - South Hallway
+- name: Direction
+  type: text
+  value:
+  - From Patient Room

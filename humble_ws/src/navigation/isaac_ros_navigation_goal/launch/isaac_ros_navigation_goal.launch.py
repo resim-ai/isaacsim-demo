@@ -16,6 +16,8 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument
+from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch.actions import RegisterEventHandler, Shutdown
@@ -25,12 +27,13 @@ from launch.launch_context import LaunchContext
 
 def exit_handler(event: ProcessExited, context: LaunchContext):
     if event.returncode == 0:
-        Shutdown(reason="All goals completed.")
-    else:
-        raise RuntimeError("Failed to complete goals.")
+        return [Shutdown(reason="All goals completed.")]
+    return [Shutdown(reason="Navigation goal process failed.")]
 
 def generate_launch_description():
     use_sim_time = LaunchConfiguration("use_sim_time", default=True)
+    namespace = LaunchConfiguration("namespace", default="carter1")
+    shutdown_on_exit = LaunchConfiguration("shutdown_on_exit", default="true")
 
     map_yaml_file = LaunchConfiguration(
         "map_yaml_path",
@@ -39,41 +42,61 @@ def generate_launch_description():
         ),
     )
 
-    goal_text_file = LaunchConfiguration(
-        "goal_text_file_path",
-        default=os.path.join(get_package_share_directory("isaac_ros_navigation_goal"), "assets", "goals.txt"),
+    experience_path = LaunchConfiguration(
+        "experience_path",
+        default="",
     )
 
     initial_pose = LaunchConfiguration(
         "initial_pose",
-        default="[-6.4, -1.04, 0.0, 0.0, 0.0, 0.99, 0.02]",
+        default="[0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0]",
     )
+    goal_count = LaunchConfiguration("goal_count", default="1")
+    publish_initial_pose = LaunchConfiguration("publish_initial_pose", default="true")
 
     navigation_goal_node = Node(
         name="set_navigation_goal",
         package="isaac_ros_navigation_goal",
         executable="SetNavigationGoal",
+        namespace=namespace,
         parameters=[
             {
                 "map_yaml_path": map_yaml_file,
-                "iteration_count": 3,
+                "iteration_count": goal_count,
                 "goal_generator_type": "GoalReader",
                 "action_server_name": "navigate_to_pose",
                 "obstacle_search_distance_in_meters": 0.2,
-                "goal_text_file_path": goal_text_file,
+                "experience_path": experience_path,
                 "initial_pose": initial_pose,
+                "publish_initial_pose": publish_initial_pose,
                 "use_sim_time": use_sim_time,
+                # Production: increase initial_pose_settle_sec (e.g. 3.0) if bt_navigator reports "Failed to send goal response"
+                "initial_pose_settle_sec": 0.5,
+                "max_goal_send_retries": 3,
+                "server_wait_timeout_sec": 60.0,
             }
         ],
         output="screen",
     )
 
     return LaunchDescription([
+        DeclareLaunchArgument(
+            "shutdown_on_exit",
+            default_value="true",
+            description="Shut down the launch system when goal node exits",
+        ),
+        DeclareLaunchArgument(
+            "experience_path",
+            default_value="",
+            description="Path to the experience YAML file",
+        ),
+        DeclareLaunchArgument("goal_count", default_value="1", description="Number of goals to execute"),
         navigation_goal_node,
         RegisterEventHandler(
             OnProcessExit(
                 target_action=navigation_goal_node,
                 on_exit=exit_handler
-            )
+            ),
+            condition=IfCondition(shutdown_on_exit),
         )
     ])

@@ -1,0 +1,254 @@
+---
+description: When users want to implement metrics 2.0 in the config.resim.yaml file.
+alwaysApply: false
+---
+## Overview
+ReSim Metrics 2.0 is an exciting new feature that allows you to emit and dynamically query metrics from your system.
+Metrics are emitted as JSON objects and stored in an `emissions.resim.jsonl` file.
+Topics and metrics are defined in the `.resim/metrics/config.resim.yaml` file.
+
+## Topics
+Topics define the data that is emitted from your system. They may contain a timestamp.
+Items in the schema can have the following types:
+- float
+- string
+- int
+- boolean
+- image
+- status
+- string[]
+- metric[]
+
+Here are some example topics:
+```
+topics:
+  time_to_goal:
+    schema:
+      time_s: float
+      goal_name: string
+  pose_difference:
+    schema:
+      position_diff_m: float
+```
+
+### Global topics
+
+There are some topics that are global to all tests. Their schemas are below:
+
+## metadata
+```
+metadata:
+  schema:
+    org_id: string
+    batch_id: string
+    job_id: string
+    run_counter: int
+    project_id: string
+    experience_id: string
+    experience_name: string
+    experience_tag_ids: string[]
+    experience_tag_names: string[]
+    branch_id: string
+    branch_name: string
+    build_id: string
+    build_name: string
+    build_creation_timestamp: timestamp
+    test_suite_id: string
+    test_suite_name: string
+    test_suite_revision: int
+    job_status: string
+    job_metrics_status: string
+    job_conflated_status: string
+```
+
+## container_performance
+```
+container_performance:
+  schema:
+    org_id: string
+    job_id: string
+    batch_id: string
+    timestamp_seconds: float # seconds since epoch
+    container_name: string
+    cpu_usage_core_seconds_per_sec: float
+    cpu_throttling_seconds: float
+    memory_usage_gib: float
+    memory_limit_failures: float
+    timestamp: float # nanoseconds since container start time
+```
+
+## test_length_seconds
+```
+test_length_seconds:
+  schema:
+    org_id: string
+    job_id: string
+    batch_id: string
+    test_length: float
+    timestamp: float
+```
+
+## Event topics
+Event topics are marked by having the `event: true` field in the config.yaml file.
+The event topic always must have a schema like this:
+```
+schema:
+  name: string
+  description: string
+  status: status
+  tags: string[]
+```
+The status field is one of the following:
+- PASSED
+- FAIL_WARN
+- FAIL_BLOCK
+- NO_STATUS_REPORTED
+
+## Metrics
+
+Metrics are how we consume the data from the topics. Their primary components are a query and a template.
+Here is an example of a metric:
+```
+metrics:
+  Localization Error:
+    type: test
+    description: Difference in position between odometry and AMCL localization poses over time.
+    query_string: SELECT 'Error' as group_name, timestamp / 1E9 AS "Time (s)", position_diff_m as "Position Difference (m)" FROM pose_difference
+    template_type: system
+    template: line
+```
+The `query_string` is a SQL query in the Trino dialect. The template defines how the plot is rendered.
+
+## SQL Dialect
+
+Metrics 2.0 queries run against **Athena (Trino SQL)**. Use Trino-compatible syntax:
+
+- Array membership: `contains(arr, val)` (not `list_contains`)
+- Array filtering with lambda: `filter(arr, x -> condition)` (not `list_filter`)
+- Conditional count: `count_if(condition)` (not `COUNT(*) FILTER (WHERE ...)`)
+- Array indexing is 1-based: `arr[1]` returns the first element
+- `starts_with(str, prefix)` is available in Trino
+
+## Query Writing Guidelines
+
+- **Timestamps**: Emitted timestamps are in nanoseconds. Divide by `1E9` to convert to seconds for display: `timestamp / 1E9 AS "Time (s)"`.
+- **Column aliases with units**: Always include units in column aliases for clarity: `AS "Speed (m/s)"`, `AS "Error (rad)"`, `AS "Distance (m)"`.
+- **Line/bar charts require 3 columns**: `[series_name, x_value, y_value]`. The column aliases at positions 2 and 3 become axis titles.
+- **Multiple series**: Use `UNION ALL` to combine series with different `group_name` values:
+  ```sql
+  SELECT 'Vehicle' as group_name, timestamp / 1E9 AS "Time (s)", vehicle AS "Distance (m)" FROM my_topic
+  UNION ALL
+  SELECT 'Implement' as group_name, timestamp / 1E9 AS "Time (s)", implement AS "Distance (m)" FROM my_topic
+  ```
+- **Source of truth**: Check `src/metrics/extract_metrics.py` for the canonical units and axis names for each metric.
+
+## Querying the metadata table
+
+The `metadata` global topic has one row per job in the batch. Batch metrics (`type: batch`) query across all rows.
+
+### Column reference
+
+| Column | Type | Description / Observed values |
+|---|---|---|
+| `org_id` | string | Organisation identifier, e.g. `"resim.ai"` |
+| `batch_id` | string (UUID) | ID of the batch this job belongs to |
+| `job_id` | string (UUID) | Unique identifier for the individual job |
+| `project_id` | string (UUID) | ReSim project ID |
+| `branch_id` | string (UUID) | Branch ID within the project |
+| `branch_name` | string | Human-readable branch name, e.g. `"main"` |
+| `build_id` | string (UUID) | ID of the build under test |
+| `build_name` | string | Human-readable build name |
+| `build_creation_timestamp` | timestamp | When the build was created |
+| `experience_id` | string (UUID) | ID of the experience (scenario) for this job |
+| `experience_name` | string | Human-readable experience name |
+| `experience_tag_ids` | string[] | UUIDs of the experience tags attached to this job |
+| `experience_tag_names` | string[] | Names of the experience tags attached to this job — use Trino array functions: `contains(experience_tag_names, 'tag')`, `filter(experience_tag_names, x -> starts_with(x, 'prefix_'))[1]` |
+| `test_suite_id` | string (UUID) | ID of the test suite |
+| `test_suite_name` | string | Human-readable test suite name |
+| `test_suite_revision` | int | Revision number of the test suite |
+| `job_status` | string | Raw execution status — observed: `'SUCCEEDED'`, `'FAILED'` |
+| `job_metrics_status` | string | Metrics evaluation status — e.g. `'PASSED'`, `'FAILED'` |
+| `job_conflated_status` | string | Combined status used for pass/fail decisions — observed: `'PASSED'`, `'ERROR'`, `'BLOCKER'`, `'WARNING'` |
+| `custom_field_keys` | string[] | Custom field names set on the job (may be `[]`) |
+| `custom_field_values` | string[] | Custom field values, parallel to `custom_field_keys` (may be `[]`) |
+| `time` | timestamp | When the metadata row was written |
+
+### Array column usage
+
+`experience_tag_names` and `experience_tag_ids` are Trino arrays. Common patterns:
+
+```sql
+-- Check membership
+WHERE contains(experience_tag_names, 'my_tag')
+
+-- Filter to tags matching a prefix, take the first result (1-based indexing)
+filter(experience_tag_names, x -> starts_with(x, 'my_prefix_'))[1]
+
+-- Conditional count across jobs
+count_if(job_conflated_status = 'PASSED')
+
+-- Group jobs by a tag prefix
+WITH classified AS (
+  SELECT
+    filter(experience_tag_names, x -> starts_with(x, 'my_prefix_'))[1] AS group_name,
+    job_conflated_status
+  FROM metadata
+  WHERE contains(experience_tag_names, 'my_tag')
+)
+SELECT group_name, count_if(job_conflated_status = 'PASSED') AS passed
+FROM classified
+WHERE group_name IS NOT NULL
+GROUP BY group_name
+```
+
+## Metric Templates
+
+- **boolean (system)**:
+    - Must return a single boolean value. The renderer uses the first row, first column.
+    - Example query: `SELECT success FROM plan_success`.
+- **line (system)**:
+    - Columns: exactly three in order `[series, x, y]` (names are arbitrary; order matters).
+    - Rows: each row must be `[series_name, x_value, y_value]`.
+    - Notes: multiple series supported by using different `series_name` values. Axis titles come from the column names at positions 2 and 3.
+    - Example query: `SELECT 'Speed' AS group_name, timestamp / 1E9 AS "Time (s)", speed AS "Speed (m/s)" FROM vehicle_speed`.
+- **bar (system)**:
+    - Same shape as `line`: columns `[series, x, y]`; rows `[series_name, x_value, y_value]`.
+- **table (system)**:
+    - Columns: any number; become table headers.
+    - Rows: any shape; rendered as-is.
+- **scalar (system)**:
+    - Must return a single value. The renderer uses the first row, first column.
+    - Example query: `SELECT AVG(norm) AS "Mean Error (m)" FROM localization_error`.
+- **image (system)**:
+    - Must return one column containing image identifiers (e.g., filenames/paths) available in the job logs. Each row yields an image item.
+    - Example query: `SELECT image_name FROM my_images_topic WHERE ...`.
+- **state_timeline (system)**:
+    - Columns: Exactly three columns in order: `[system, timestamp, state]`. Column names are arbitrary, but order matters.
+    - Rows: Each row must be `[system_name, timestamp, state_name]`.
+        - `system_name`: String identifying the system or subsystem being tracked
+        - `timestamp`: Integer timestamp in nanoseconds
+        - `state_name`: String identifying the current state at this timestamp
+    - Notes:
+        - Multiple systems are supported by using different `system_name` values.
+        - Consecutive readings with the same state are automatically merged into segments.
+        - Timestamps are converted to elapsed seconds from the first timestamp.
+        - Each unique state gets an automatically assigned color from the ReSim palette.
+        - X-axis title will be "Elapsed time (s)".
+        - Y-axis title will be provided by the title assigned to the "system" column
+        - Example query: `SELECT system_name AS system, timestamp_ns AS timestamp, state AS state FROM system_states ORDER BY timestamp_ns`.
+
+## Metric Properties
+
+- `type`: `test` (per-job) or `batch` (across jobs).
+- `description`: Human-readable description of the metric.
+- `query_string`: SQL query against emitted topic data.
+- `template_type`: Always `system` for built-in templates, or `custom` for custom liquid templates.
+- `template`: One of `boolean`, `line`, `bar`, `table`, `scalar`, `image`, `state_timeline`.
+- `skip_if_no_data`: If `true`, metric is silently skipped when the query returns no rows.
+- `status`: Optional block/warn thresholds:
+  ```yaml
+  status:
+    query_string: SELECT * FROM my_topic WHERE value > ?
+    block: 1.0
+    warn: 0.5
+  ```

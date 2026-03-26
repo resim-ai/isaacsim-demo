@@ -10,4 +10,9 @@ install(DIRECTORY
   rviz2
   DESTINATION share/${PROJECT_NAME})
 
+install(PROGRAMS
+  scripts/publish_initial_pose
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 ament_package()

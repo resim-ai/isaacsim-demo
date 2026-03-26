@@ -4,31 +4,21 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT.
 
-import json
 import os
-from pathlib import Path
 
 from ament_index_python.packages import get_package_share_directory
+from isaac_ros_navigation_goal.experience_config import load_experience_config  # pyright: ignore[reportMissingImports]
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 
-def get_experience_location() -> str:
-    """Get the goals file path from test config or use default."""
-    test_config_path = Path("/tmp/resim/test_config.json")
-    if test_config_path.exists():
-        with open(test_config_path, "r") as f:
-            test_config = json.load(f)
-            return test_config["experienceLocation"]
-    else:
-        return os.path.join(
-            get_package_share_directory("isaac_ros_navigation_goal"), "assets", "goals.txt"
-        )
-
-
 def generate_launch_description():
+    experience_config = load_experience_config(
+        default_initial_pose=[-6.4, -1.04, 0.0, 0.02, 0.0, 0.0, 0.99]
+    )
+
     # Default map path
     default_map_path = os.path.join(
         get_package_share_directory("carter_navigation"),
@@ -45,7 +35,7 @@ def generate_launch_description():
 
     goal_text_file_path_arg = DeclareLaunchArgument(
         "goal_text_file_path",
-        default_value=get_experience_location(),
+        default_value=experience_config["goals_path"],
         description="Path to the goals text file",
     )
 
@@ -63,8 +53,8 @@ def generate_launch_description():
 
     initial_pose_arg = DeclareLaunchArgument(
         "initial_pose",
-        default_value="[-6.4, -1.04, 0.0, 0.0, 0.0, 0.99, 0.02]",
-        description="Initial pose of the robot [x, y, z, qx, qy, qz, qw] to avoid spawning obstacles near it.",
+        default_value=str(experience_config["initial_pose"]),
+        description="Initial pose of the robot [x, y, z, qw, qx, qy, qz] to avoid spawning obstacles near it.",
     )
 
     # Node

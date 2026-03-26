@@ -9,22 +9,23 @@ services:
       - DISPLAY=${DISPLAY}
       - GUI=true
     volumes:
-      - shadercache:/shadercache
+      - shadercache:/isaac-sim/shadercache
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ../assets:/tmp/resim/assets
+    network_mode: host
   nav2:
     image: resim-humble-nav2
     extends:
       file: docker-compose.yml
       service: nav2
-    command: ["rviz:=true", "send_goals:=false"]
+    command: ["rviz:=true", "send_goals:=true"]
     environment:
       - DISPLAY=${DISPLAY}
       - RESIM_NAV2_TIMEOUT=3600
     volumes:
-      - ./outputs:/tmp/resim/outputs
+      - ../outputs:/tmp/resim/outputs
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
-
-# https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/5.0/Isaac/Props/Pallet/o3dyn_pallet.usd
+    network_mode: host
 
 volumes:
   shadercache:
