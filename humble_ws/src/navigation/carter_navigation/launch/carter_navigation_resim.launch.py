@@ -36,6 +36,10 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
+NODE_OUTPUT_CONFIG = {
+    "stderr": {"screen", "own_log"},
+    "stdout": {"screen", "own_log"},
+}
 
 def execute_action_if_message_seen(
     event: ProcessIO, action: LaunchDescriptionEntity, message: str
@@ -115,6 +119,7 @@ def launch_setup(context):
         executable="isaac_ready",
         name="isaac_ready_node",
         namespace=namespace,
+        output=NODE_OUTPUT_CONFIG,
         parameters=[
             {
                 "initial_pose": experience_config["initial_pose"],
@@ -128,7 +133,7 @@ def launch_setup(context):
         executable="publish_initial_pose",
         name="publish_initial_pose",
         namespace=namespace,
-        output="screen",
+        output=NODE_OUTPUT_CONFIG,
         parameters=[
             {
                 "initial_pose": experience_config["initial_pose"],
@@ -144,7 +149,7 @@ def launch_setup(context):
         executable="set_simulation_state",
         name="set_simulation_playing",
         namespace=namespace,
-        output="screen",
+        output=NODE_OUTPUT_CONFIG,
         parameters=[{"target_state": "playing"}],
     )
     set_simulation_stopped_node = Node(
@@ -152,13 +157,13 @@ def launch_setup(context):
         executable="set_simulation_state",
         name="set_simulation_stopped",
         namespace=namespace,
-        output="screen",
+        output=NODE_OUTPUT_CONFIG,
         parameters=[{"target_state": "stopped"}],
     )
     metrics_emitter_node = Node(
         package="metrics_emitter",
         executable="metrics_emitter",
-        output="screen",
+        output=NODE_OUTPUT_CONFIG,
         namespace=namespace,
         parameters=[
             {
@@ -179,7 +184,7 @@ def launch_setup(context):
         name="image_throttler",
         package="topic_tools",
         executable="throttle",
-        output="screen",
+        output=NODE_OUTPUT_CONFIG,
         namespace=namespace,
         arguments=[
             "messages",
@@ -193,6 +198,7 @@ def launch_setup(context):
         executable="pointcloud_to_laserscan_node",
         name="pointcloud_to_laserscan",
         namespace=namespace,
+        output=NODE_OUTPUT_CONFIG,
         remappings=[
             ("cloud_in", namespaced_topic(namespace, "front_3d_lidar/lidar_points")),
             ("scan", namespaced_topic(namespace, "scan")),
@@ -234,7 +240,7 @@ def launch_setup(context):
             "--exclude",
             "(/front_stereo_camera/left/image_raw$|/front_stereo_camera/left/image_raw/nitros_bridge$)",
         ],
-        output="screen",
+        output=NODE_OUTPUT_CONFIG,
     )
     ld_automatic_goal = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(

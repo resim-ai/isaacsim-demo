@@ -2,6 +2,7 @@
 set -e
 
 export FASTRTPS_DEFAULT_PROFILES_FILE="/humble_ws/fastdds.xml"
+export ROS_LOG_DIR="/tmp/resim/outputs/logs"
 
 source /opt/ros/humble/setup.bash
 source /humble_ws/install/setup.bash
