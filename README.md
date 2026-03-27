@@ -19,6 +19,8 @@ Download the assets:
 ./scripts/download_assets.sh
 ```
 
+Install ROS2 Humble.
+
 #### Running
 
 Start up Isaac Sim 5.1.0 with these arguments:

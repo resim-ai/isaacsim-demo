@@ -3,9 +3,10 @@ services:
     image: ${ISAACSIM_IMAGE}
     privileged: true
     labels:
-      - resim.ai/ignoreContainerNotFinished=true
+      - resim.ai/containerPriority=1
     environment:
       - NVIDIA_DRIVER_CAPABILITIES=all
+    restart: unless-stopped
     deploy:
       resources:
         reservations:
@@ -19,3 +20,4 @@ services:
     image: ${NAV2_IMAGE}
     labels:
       - resim.ai/isTestOrchestrator=true
+      - resim.ai/containerPriority=2
