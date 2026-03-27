@@ -353,8 +353,8 @@ class MetricsRunner:
         self.emitter.emit(
             "camera_video",
             {
-                "camera_name": "front_stereo_camera_left",
                 "filename": str(self.camera_output_path.name),
+                "camera_name": "front_stereo_camera_left",
             },
         )
 
