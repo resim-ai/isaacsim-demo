@@ -45,9 +45,10 @@ topics:
       within_1_sigma: int
       within_2_sigma: int
       within_3_sigma: int
-  camera_gif:
+  camera_video:
     schema:
-      filename: image
+      camera_name: string
+      filename: video
   robot_trajectory:
     schema:
       raw_metric: string
@@ -64,10 +65,10 @@ topics:
 metrics:
   Stereo Camera Feed:
     type: test
-    description: Camera feed from navigation, sped up 2x, starting after first goal received.
-    query_string: SELECT filename FROM camera_gif
+    description: Camera feed from navigation, starting after first goal received.
+    query_string: SELECT filename FROM camera_video
     template_type: system
-    template: image
+    template: video
   Time to reach final goal:
     type: test
     description: Time between receiving first goal and reaching final goal; blocks if goal is not reached within 75 seconds.
@@ -259,42 +260,42 @@ metrics:
     template: bar
   Camera feed (bright scenes):
     type: batch
-    description: All camera GIFs from scenarios with Lighting = Bright.
+    description: All camera videos from scenarios with Lighting = Bright.
     query_string: |
-      SELECT m.experience_name, cg.job_id
-      FROM camera_gif cg
-      JOIN metadata m ON cg.job_id = m.job_id
+      SELECT m.experience_name, cv.job_id
+      FROM camera_video cv
+      JOIN metadata m ON cv.job_id = m.job_id
       WHERE contains(m.custom_field_keys, 'Lighting')
         AND m.custom_field_values[array_position(m.custom_field_keys, 'Lighting')] = 'Bright'
       ORDER BY m.experience_name;
     template_type: system
-    template: image
+    template: video
     skip_if_no_data: true
   Camera feed (dim scenes):
     type: batch
-    description: All camera GIFs from scenarios with Lighting = Dim.
+    description: All camera videos from scenarios with Lighting = Dim.
     query_string: |
-      SELECT m.experience_name, cg.job_id
-      FROM camera_gif cg
-      JOIN metadata m ON cg.job_id = m.job_id
+      SELECT m.experience_name, cv.job_id
+      FROM camera_video cv
+      JOIN metadata m ON cv.job_id = m.job_id
       WHERE contains(m.custom_field_keys, 'Lighting')
         AND m.custom_field_values[array_position(m.custom_field_keys, 'Lighting')] = 'Dim'
       ORDER BY m.experience_name;
     template_type: system
-    template: image
+    template: video
     skip_if_no_data: true
   Camera feed (dark scenes):
     type: batch
-    description: All camera GIFs from scenarios with Lighting = Dark.
+    description: All camera videos from scenarios with Lighting = Dark.
     query_string: |
-      SELECT m.experience_name, cg.job_id
-      FROM camera_gif cg
-      JOIN metadata m ON cg.job_id = m.job_id
+      SELECT m.experience_name, cv.job_id
+      FROM camera_video cv
+      JOIN metadata m ON cv.job_id = m.job_id
       WHERE contains(m.custom_field_keys, 'Lighting')
         AND m.custom_field_values[array_position(m.custom_field_keys, 'Lighting')] = 'Dark'
       ORDER BY m.experience_name;
     template_type: system
-    template: image
+    template: video
     skip_if_no_data: true
   Goal Dwelling Time:
     type: batch

@@ -2,18 +2,17 @@ import argparse
 from enum import Enum
 import logging
 import math
+import subprocess
 import sys
 from typing import Sequence
 from pathlib import Path
-import cv2
 import numpy as np
-import imageio
 import rclpy.serialization
 from resim.sdk.metrics import Emitter
 from rosidl_runtime_py.utilities import get_message
 import rosbag2_py
+from foxglove_msgs.msg import CompressedVideo
 from nav_msgs.msg import Odometry
-from sensor_msgs.msg import Image as ROSImage
 from geometry_msgs.msg import PoseStamped, Pose
 from tf2_msgs.msg import TFMessage
 from tf2_ros import Buffer
@@ -179,7 +178,7 @@ class MetricsRunner:
 
     @property
     def camera_output_path(self) -> Path:
-        return self.output_path.with_name("camera.gif")
+        return self.output_path.with_name("camera.mp4")
 
     def _identify_namespace(self) -> str:
         reader = rosbag2_py.SequentialReader()
@@ -242,17 +241,17 @@ class MetricsRunner:
 
     def run(self) -> None:
         """Run the metrics for a single experience."""
-        self.emit_camera_gif()
+        self.emit_camera_video()
         self.emit_robot_trajectory_chart()
         self.emit_velocity_data()
         self.emit_nearest_human_distance_data()
 
-    def emit_camera_gif(self):
-        """Create a GIF from camera images in an MCAP file, starting after the first goal."""
-        camera_topic = self._namespaced_topic("/front_stereo_camera/left/image_raw_throttled")
+    def emit_camera_video(self):
+        """Extract MP4 from Foxglove compressed video messages after first goal."""
+        camera_topic = self._namespaced_topic("/front_stereo_camera/left/image_raw/foxglove")
         first_goal_time = None
         goal_topic = self._namespaced_topic("/goal")
-        for _, msg, timestamp in read_messages(str(self.log_path), [goal_topic]):
+        for _, _, timestamp in read_messages(str(self.log_path), [goal_topic]):
             first_goal_time = timestamp
             break
 
@@ -260,51 +259,104 @@ class MetricsRunner:
             logger.warning("No goal messages found")
             return
 
-        frames = []
+        logger.info("Extracting compressed video stream after first goal...")
+        raw_video_path = self.output_path.with_name("camera_stream.bin")
         frame_count = 0
+        ffmpeg_input_format = None
 
-        logger.info("Processing frames...")
+        format_aliases = {
+            "h264": "h264",
+            "avc": "h264",
+            "h.264": "h264",
+            "h265": "hevc",
+            "hevc": "hevc",
+            "h.265": "hevc",
+        }
 
-        for _, msg, timestamp in read_messages(str(self.log_path), [camera_topic]):
-            if timestamp < first_goal_time:
-                continue
+        with raw_video_path.open("wb") as raw_video_file:
+            for _, msg, timestamp in read_messages(str(self.log_path), [camera_topic]):
+                if timestamp < first_goal_time:
+                    continue
 
-            if isinstance(msg, ROSImage):
-                img = np.frombuffer(msg.data, dtype=np.uint8)
-                img = img.reshape(msg.height, msg.width, -1)
+                if not isinstance(msg, CompressedVideo):
+                    continue
 
-                if msg.encoding == "bgr8":
-                    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                normalized_format = msg.format.strip().lower()
+                if ffmpeg_input_format is None:
+                    ffmpeg_input_format = format_aliases.get(normalized_format)
+                    if ffmpeg_input_format is None:
+                        logger.warning(
+                            "Unsupported compressed video format '%s' on %s",
+                            msg.format,
+                            camera_topic,
+                        )
+                        if raw_video_path.exists():
+                            raw_video_path.unlink()
+                        return
 
-                scale_percent = 25
-                width = int(img.shape[1] * scale_percent / 100)
-                height = int(img.shape[0] * scale_percent / 100)
-                img = cv2.resize(img, (width, height), interpolation=cv2.INTER_AREA)
-
-                frames.append(img)
+                raw_video_file.write(bytes(msg.data))
                 frame_count += 1
 
-                if frame_count % 100 == 0:
-                    logger.info(f"Processed {frame_count} frames")
-
-        if not frames:
-            logger.warning("No valid frames found after goal")
+        if frame_count == 0:
+            logger.warning("No compressed video frames found after first goal")
+            if raw_video_path.exists():
+                raw_video_path.unlink()
             return
 
-        logger.info("Saving final GIF...")
-        imageio.mimsave(
-            self.camera_output_path,
-            frames,
-            fps=10,
-            optimize=True,
-            duration=0.1,
-            quantizer="nq",
-            loop=0,
+        logger.info("Remuxing %d frames to MP4 with ffmpeg...", frame_count)
+        command = [
+            "ffmpeg",
+            "-y",
+            "-r",
+            "25",
+            "-f",
+            ffmpeg_input_format,
+            "-i",
+            str(raw_video_path),
+            "-vf",
+            "scale=-2:720:flags=lanczos",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "medium",
+            "-crf",
+            "24",
+            "-maxrate",
+            "12M",
+            "-bufsize",
+            "24M",
+            "-pix_fmt",
+            "yuv420p",
+            "-r",
+            "25",
+            "-movflags",
+            "+faststart",
+            str(self.camera_output_path),
+        ]
+        try:
+            completed = subprocess.run(
+                command,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            if completed.stderr:
+                logger.info(completed.stderr.strip())
+        except subprocess.CalledProcessError as err:
+            logger.error("ffmpeg failed while creating camera video: %s", err.stderr)
+            return
+        finally:
+            if raw_video_path.exists():
+                raw_video_path.unlink()
+
+        logger.info("Saved camera video to %s", self.camera_output_path)
+        self.emitter.emit(
+            "camera_video",
+            {
+                "camera_name": "front_stereo_camera_left",
+                "filename": str(self.camera_output_path.name),
+            },
         )
-
-        logger.info(f"Saved optimized GIF to {self.camera_output_path}")
-
-        self.emitter.emit("camera_gif", {"filename": str(self.camera_output_path.name)})
 
     def emit_robot_trajectory_chart(self):
         """Add a metric showing the robot's trajectory from a top-down view with goal points."""

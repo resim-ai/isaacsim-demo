@@ -12,12 +12,14 @@ This repo contains examples of building a shader cache to optimise startup times
 
 This example is based on the [ROS2 Navigation](https://docs.isaacsim.omniverse.nvidia.com/latest/ros2_tutorials/tutorial_ros2_navigation.html) example from the NVIDIA docs.
 
-#### Running
+#### Setup
 
 Download the assets:
 ```
 ./scripts/download_assets.sh
 ```
+
+#### Running
 
 Start up Isaac Sim 5.1.0 with these arguments:
 ```

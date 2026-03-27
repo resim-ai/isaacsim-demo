@@ -2,7 +2,11 @@ FROM osrf/ros:humble-desktop
 
 WORKDIR /app
 
-RUN apt update && apt install -y python3-pip ros-humble-rosbag2-storage-mcap
+RUN apt update && apt install -y \
+    ffmpeg \
+    python3-pip \
+    ros-humble-foxglove-msgs \
+    ros-humble-rosbag2-storage-mcap
 
 SHELL ["/bin/bash", "-c"]
 

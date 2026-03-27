@@ -64,6 +64,61 @@ def namespaced_topic(namespace: str, topic: str) -> str:
     return f"/{topic}"
 
 
+def camera_video_topics(namespace: str) -> dict[str, str]:
+    return {
+        "raw": namespaced_topic(namespace, "front_stereo_camera/left/image_raw"),
+        "raw_25fps": namespaced_topic(namespace, "front_stereo_camera/left/image_raw_25fps"),
+        "foxglove": namespaced_topic(namespace, "front_stereo_camera/left/image_raw/foxglove"),
+        "nitros_bridge": namespaced_topic(
+            namespace, "front_stereo_camera/left/image_raw/nitros_bridge"
+        ),
+    }
+
+
+def create_camera_video_pipeline(namespace: str) -> tuple[list[Node], str]:
+    topics = camera_video_topics(namespace)
+    camera_25fps_throttler_node = Node(
+        name="camera_25fps_throttler",
+        package="topic_tools",
+        executable="throttle",
+        output=NODE_OUTPUT_CONFIG,
+        namespace=namespace,
+        arguments=[
+            "messages",
+            topics["raw"],
+            "25.0",
+            topics["raw_25fps"],
+        ],
+    )
+    foxglove_video_republisher_node = Node(
+        name="foxglove_video_republisher",
+        package="image_transport",
+        executable="republish",
+        output=NODE_OUTPUT_CONFIG,
+        namespace=namespace,
+        arguments=["raw", "foxglove"],
+        remappings=[
+            ("in", topics["raw_25fps"]),
+            ("out/foxglove", topics["foxglove"]),
+        ],
+        parameters=[
+            {
+                # Foxglove playback requires every frame to be independently decodable.
+                "out.foxglove.gop_size": 1,
+                # All-intra H.264 can still be very large, so bias strongly toward size.
+                "out.foxglove.bit_rate": 12_000_000,
+                "out.foxglove.qmax": 40,
+                "out.foxglove.pixel_format": "yuv420p",
+                "out.foxglove.encoder_av_options": "crf:35,preset:veryfast,tune:zerolatency",
+            }
+        ],
+    )
+    exclude_pattern = (
+        f"({topics['raw']}$|{topics['nitros_bridge']}$|{topics['raw_25fps']}$)"
+    )
+    return [camera_25fps_throttler_node, foxglove_video_republisher_node], exclude_pattern
+
+
 def resolve_requested_experience_path(context) -> Optional[Path]:
     explicit_experience_path = LaunchConfiguration("experience_path").perform(context).strip()
     if TEST_CONFIG_PATH.exists() or not explicit_experience_path:
@@ -80,6 +135,7 @@ def launch_setup(context):
     experience_config = load_experience_config(experience_location=requested_experience_path)
     namespace = require_experience_field(experience_config, "namespace", allow_empty=True)
     use_namespace = "True" if namespace else "False"
+    camera_video_nodes, camera_video_exclude_pattern = create_camera_video_pipeline(namespace)
 
     # -------------------------------------------------------------------------
     # Paths and launch argument defaults
@@ -180,19 +236,6 @@ def launch_setup(context):
             else []
         ),
     )
-    image_throttler_node = Node(
-        name="image_throttler",
-        package="topic_tools",
-        executable="throttle",
-        output=NODE_OUTPUT_CONFIG,
-        namespace=namespace,
-        arguments=[
-            "messages",
-            namespaced_topic(namespace, "front_stereo_camera/left/image_raw"),
-            "5.0",
-            namespaced_topic(namespace, "front_stereo_camera/left/image_raw_throttled"),
-        ],
-    )
     pointcloud_to_laserscan_node = Node(
         package="pointcloud_to_laserscan",
         executable="pointcloud_to_laserscan_node",
@@ -238,7 +281,7 @@ def launch_setup(context):
             "--use-sim-time",
             "--all",
             "--exclude",
-            "(/front_stereo_camera/left/image_raw$|/front_stereo_camera/left/image_raw/nitros_bridge$)",
+            camera_video_exclude_pattern,
         ],
         output=NODE_OUTPUT_CONFIG,
     )
@@ -291,7 +334,7 @@ def launch_setup(context):
             }.items(),
         ),
         metrics_emitter_node,
-        image_throttler_node,
+        *camera_video_nodes,
         pointcloud_to_laserscan_node,
     ]
 

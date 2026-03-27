@@ -36,7 +36,7 @@ source /opt/ros/humble/local_setup.bash
 source humble_ws/install/local_setup.bash
 source humble_ws/venv/bin/activate
 
-ros2 launch carter_navigation carter_navigation_resim_hospital.launch.py \
+ros2 launch carter_navigation carter_navigation_resim.launch.py \
     rviz:=true \
     send_goals:=true \
     experience_path:="$EXPERIENCE_PATH"
