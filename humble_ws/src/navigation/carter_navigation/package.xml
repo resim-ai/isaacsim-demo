@@ -57,8 +57,13 @@
   <build_depend>nav2_controller</build_depend>
   <build_depend>nav2_waypoint_follower</build_depend>
   <build_depend>pointcloud_to_laserscan</build_depend>
-  <build_depend>topic_tools</build_depend>
-  <build_depend>checklist</build_depend>
+  <build_depend>spatio_temporal_voxel_layer</build_depend>
+  <build_depend>resim_isaac_control</build_depend>
+  <build_depend>rclpy</build_depend>
+  <build_depend>geometry_msgs</build_depend>
+  <depend>image_transport</depend>
+  <depend>topic_tools</depend>
+  <depend>foxglove_compressed_video_transport</depend>
 
 
   <export>

@@ -1,0 +1,35 @@
+version: 1
+
+topics: {}
+
+metrics:
+  Total time to reach final Goal (by build):
+    type: report
+    description: Total time to reach final goal per batch, by build creation date.
+    query_string: |
+      WITH per_job AS (
+        SELECT
+          gc.job_id,
+          MAX(gc.count) AS expected_goal_count,
+          COUNT(ttg.time_s) AS completed_goal_count,
+          COALESCE(SUM(ttg.time_s), 0) AS total_time
+        FROM goal_count gc
+        LEFT JOIN time_to_goal ttg ON gc.job_id = ttg.job_id
+        GROUP BY gc.job_id
+      )
+      SELECT
+        'Total time to reach final Goal' AS group_name,
+        date_format(MAX(m.build_creation_timestamp), '%h:%m %M %e') AS "Build date",
+        SUM(
+          CASE
+            WHEN per_job.completed_goal_count != per_job.expected_goal_count THEN 75
+            ELSE per_job.total_time
+          END
+        ) AS "Time (s)"
+      FROM per_job
+      JOIN metadata m ON per_job.job_id = m.job_id
+      WHERE m.build_creation_timestamp >= current_timestamp - interval '3' month
+      GROUP BY m.batch_id
+      ORDER BY MAX(m.build_creation_timestamp);
+    template_type: system
+    template: line

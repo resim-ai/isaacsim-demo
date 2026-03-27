@@ -1,0 +1,26 @@
+name: Warehouse Mid Room Navigation Reverse
+description: Robot navigates from north of warehouse through waypoints in the middle of the room in reverse order.
+initial_pose: [-6.0, -1.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+isaacsim_entity: "/World/Nova_Carter_ROS"
+goals:
+  - [3.4, 4.5, 0.0, 0.5, 0.5, 0.5, 0.5]
+  - [2.0, 3.0, 0.0, 1.0, 0.0, 0.0, 1.0]
+  - [1.0, 2.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+world_uri: "/tmp/resim/assets/carter_warehouse_navigation_collected/carter_warehouse_navigation.usd"
+namespace: ""
+nav2_params_file: carter_navigation_warehouse_params.yaml
+map_file: carter_warehouse_navigation.yaml
+rviz_config_file: carter_navigation.rviz
+customFields:
+- name: Building
+  type: text
+  values:
+  - Warehouse
+- name: Lighting
+  type: text
+  values:
+  - Bright
+- name: Pedestrians
+  type: text
+  value:
+  - No

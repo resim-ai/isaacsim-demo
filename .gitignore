@@ -1,6 +1,8 @@
 humble_ws/build
 humble_ws/install
 humble_ws/log
+humble_ws/venv
+!humble_ws/venv/COLCON_IGNORE
 outputs
 build
 .venv
@@ -13,3 +15,5 @@ build_ws/humble
 # Emacs
 *~
 .#*
+
+__pycache__/

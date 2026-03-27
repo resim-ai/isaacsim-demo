@@ -17,7 +17,7 @@ def generate_launch_description():
     2. Delete each found entity using DeleteEntity service
     
     Based on Isaac Sim documentation:
-    https://docs.isaacsim.omniverse.nvidia.com/5.0.0/ros2_tutorials/tutorial_ros2_simulation_control.html#deleteentity-service
+    https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_simulation_control.html#deleteentity-service
     """
     
     cleanup_node = Node(
