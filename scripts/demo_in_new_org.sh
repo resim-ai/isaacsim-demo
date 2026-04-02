@@ -3,6 +3,15 @@
 set -euo pipefail
 
 PROJECT_NAME="An Isaac Sim Sandbox"
+REGISTRY="909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images"
+
+# Update SHA to the short commit SHA from the latest CI build (visible in ECR image tags).
+SHA="b924075"
+
+# Metrics build — update to the SHA tag produced by the latest CI run for the
+# metrics container (tagged as isaac-sim-metrics-<sha> in ECR).
+METRICS_IMAGE="${REGISTRY}:isaac-sim-metrics-${SHA}"
+METRICS_VERSION="ee1de385c6e5eb71d41d27004b1931e3752aa91c"
 
 # Function to pause execution
 pause() {
@@ -21,22 +30,19 @@ resim system create --project "${PROJECT_NAME}" --name "Isaac Sim" --description
 	--build-gpus 1 --build-memory-mib 32768 --build-vcpus 8 --metrics-build-vcpus 2 --metrics-build-memory-mib 8192
 # pause
 
-# # Setup the experiences
-EXPERIENCE_NUMBERS=(1 2 3 4 5 6)
-for EXPERIENCE_NUMBER in "${EXPERIENCE_NUMBERS[@]}"; do
-	resim experiences create --project "${PROJECT_NAME}" \
-		--name "Nav2 #${EXPERIENCE_NUMBER}" \
-		--description "Nav2 Experience ${EXPERIENCE_NUMBER}" \
-		--location "/goals/goals_${EXPERIENCE_NUMBER}.txt" \
-    --systems "Isaac Sim"
-	# pause
-done
+# Sync all experiences and managed test suites from resim_experience_sync.yaml.
+# This creates/updates all 46 hospital + warehouse experiences and the three
+# managed test suites (Hospital Demo, Demo Smoke, Warehouse Demo).
+resim experiences sync --project "${PROJECT_NAME}" --file ./resim_experience_sync.yaml
+# pause
 
-# # Set up the metrics builds
+# Set up the metrics builds
 export NAV2_METRICS_BUILD_ID="$(resim metrics-builds create --project "${PROJECT_NAME}" \
 	--name "Nav2 Metrics" \
-	--image 909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaac-sim-metrics-10148d2 \
-	--version "ee1de385c6e5eb71d41d27004b1931e3752aa91c" --github | sed 's/.*=//')"
+	--image "${METRICS_IMAGE}" \
+	--version "${METRICS_VERSION}" \
+	--systems "Isaac Sim" \
+	--github | sed 's/.*=//')"
 # pause
 
 export DEFAULT_REPORT_METRICS_BUILD_ID="$(resim metrics-builds create --project "${PROJECT_NAME}" \
@@ -46,59 +52,31 @@ export DEFAULT_REPORT_METRICS_BUILD_ID="$(resim metrics-builds create --project 
 	--github | sed 's/.*=//')"
 # pause
 
-# Set up the test suite
-resim test-suites create --project "${PROJECT_NAME}" \
-	--name "Nav2 Demo Tests" --description "Tests for the Nav2 Demo" \
-	--system "Isaac Sim" --metrics-build "${NAV2_METRICS_BUILD_ID}" \
-	--show-on-summary \
-	--experiences "Nav2 #1, Nav2 #2, Nav2 #3, Nav2 #4, Nav2 #5, Nav2 #6"
+# Set up the system build
+export ISAACSIM_IMAGE="${REGISTRY}:isaacsim-mcb-isaacsim-${SHA}"
+export NAV2_IMAGE="${REGISTRY}:isaacsim-mcb-nav2-${SHA}"
+export ISAAC_SIM_BUILD_ID="$(resim builds create --project "${PROJECT_NAME}" --build-spec ./builds/docker-compose.yml \
+  --system "Isaac Sim" --name "Isaac Sim Build @ ${SHA}" --description "Isaac Sim Nav2 demo build" \
+  --branch "main" --version "${SHA}" --auto-create-branch --github --use-os-env \
+  --assets "collected_hospital_demo:0,carter_warehouse_navigation_collected:0" | sed 's/.*=//')"
 # pause
 
-# Set up the three system builds
-# V1 - slow and a bit sad
-export ISAACSIM_IMAGE="909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-isaacsim-73480e1"
-export NAV2_IMAGE="909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-nav2-73480e1"
-export ISAAC_SIM_BUILD_ID_V1="$(resim builds create --project "${PROJECT_NAME}" --build-spec ./builds/docker-compose.yml \
-  --system "Isaac Sim" --name "Isaac Sim Build @ 73480e1" --description "73480e1: [nav2] Add new metrics" \
-  --branch "main" --version "73480e1" --auto-create-branch --github --use-os-env | sed 's/.*=//')"
-sleep 60
+# Attach the metrics build and metrics set to the Demo Smoke suite before running
+resim suites revise --project "${PROJECT_NAME}" \
+  --test-suite "Demo Smoke" \
+  --metrics-build "${NAV2_METRICS_BUILD_ID}" \
+  --metrics-set "Nav2 Metrics"
 # pause
 
-# V2 - new controller - faster
-export ISAACSIM_IMAGE="909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-isaacsim-62854c1"
-export NAV2_IMAGE="909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-nav2-62854c1"
-export ISAAC_SIM_BUILD_ID_V2="$(resim builds create --project "${PROJECT_NAME}" --build-spec ./builds/docker-compose.yml \
-  --system "Isaac Sim" --name "Isaac Sim Build @ 62854c1" --description "62854c1: [nav2] Use MPPI controller" \
-  --branch "main" --version "62854c1" --auto-create-branch --github --use-os-env | sed 's/.*=//')"
-sleep 60
-# pause
-
-# V3 - new planner - smoother
-export ISAACSIM_IMAGE="909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-isaacsim-10148d2"
-export NAV2_IMAGE="909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images:isaacsim-mcb-nav2-10148d2"
-export ISAAC_SIM_BUILD_ID_V3="$(resim builds create --project "${PROJECT_NAME}" --build-spec ./builds/docker-compose.yml \
-  --system "Isaac Sim" --name "Isaac Sim Build @ 10148d2" --description "10148d2: [nav2] Use SmacLattice planner" \
-  --branch "main" --version "10148d2" --auto-create-branch --github --use-os-env | sed 's/.*=//')"
-# pause
-
-# Run the batches
+# Run the batch
 resim test-suites run --project "${PROJECT_NAME}" \
-  --test-suite "Nav2 Demo Tests" \
-  --batch-name "Nav2 Baseline" \
-  --build-id "${ISAAC_SIM_BUILD_ID_V1}"
+  --test-suite "Demo Smoke" \
+  --batch-name "Nav2 Demo" \
+  --build-id "${ISAAC_SIM_BUILD_ID}" \
+  --pool-labels 'resim:metrics2:k8s' \
+  --sync-metrics-config --metrics-config-path .resim/metrics/config.resim.yml \
+  --allowable-failure-percent 25
 # pause
 
-resim test-suites run --project "${PROJECT_NAME}" \
-  --test-suite "Nav2 Demo Tests" \
-  --batch-name "Nav2 New Controller" \
-  --build-id "${ISAAC_SIM_BUILD_ID_V2}"
-# pause
-
-resim test-suites run --project "${PROJECT_NAME}" \
-  --test-suite "Nav2 Demo Tests" \
-  --batch-name "Nav2 New Planner" \
-  --build-id "${ISAAC_SIM_BUILD_ID_V3}"
-# pause
-
-echo "Once the above batches are complete, run the report using the following command: "
-echo "resim reports create --branch main --metrics-build-id $DEFAULT_REPORT_METRICS_BUILD_ID --project \"${PROJECT_NAME}\" --test-suite \"Nav2 Demo Tests\" --length 1"
+echo "Once the above batch is complete, run the report using the following command: "
+echo "resim reports create --branch main --metrics-build-id $DEFAULT_REPORT_METRICS_BUILD_ID --project \"${PROJECT_NAME}\" --test-suite \"Demo Smoke\" --length 1"

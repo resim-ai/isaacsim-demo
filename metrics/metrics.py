@@ -11,7 +11,7 @@ import rclpy.serialization
 from resim.sdk.metrics import Emitter
 from rosidl_runtime_py.utilities import get_message
 import rosbag2_py
-from foxglove_msgs.msg import CompressedVideo
+from sensor_msgs.msg import CompressedImage
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped, Pose
 from tf2_msgs.msg import TFMessage
@@ -247,8 +247,10 @@ class MetricsRunner:
         self.emit_nearest_human_distance_data()
 
     def emit_camera_video(self):
-        """Extract MP4 from Foxglove compressed video messages after first goal."""
-        camera_topic = self._namespaced_topic("/front_stereo_camera/left/image_raw/foxglove")
+        """Encode MP4 from JPEG-compressed camera frames after first goal."""
+        camera_topic = self._namespaced_topic(
+            "/front_stereo_camera/left/image_raw_10fps/compressed"
+        )
         first_goal_time = None
         goal_topic = self._namespaced_topic("/goal")
         for _, _, timestamp in read_messages(str(self.log_path), [goal_topic]):
@@ -259,97 +261,58 @@ class MetricsRunner:
             logger.warning("No goal messages found")
             return
 
-        logger.info("Extracting compressed video stream after first goal...")
-        raw_video_path = self.output_path.with_name("camera_stream.bin")
+        logger.info("Encoding camera video from JPEG frames after first goal...")
+        ffmpeg_command = [
+            "ffmpeg",
+            "-y",
+            "-f", "image2pipe",
+            "-vcodec", "mjpeg",
+            "-r", "10",
+            "-i", "pipe:0",
+            "-vf", "scale=-2:720:flags=lanczos",
+            "-c:v", "libx264",
+            "-preset", "medium",
+            "-crf", "24",
+            "-pix_fmt", "yuv420p",
+            "-movflags", "+faststart",
+            str(self.camera_output_path),
+        ]
+        proc = subprocess.Popen(
+            ffmpeg_command,
+            stdin=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+
         frame_count = 0
-        ffmpeg_input_format = None
-
-        format_aliases = {
-            "h264": "h264",
-            "avc": "h264",
-            "h.264": "h264",
-            "h265": "hevc",
-            "hevc": "hevc",
-            "h.265": "hevc",
-        }
-
-        with raw_video_path.open("wb") as raw_video_file:
+        try:
             for _, msg, timestamp in read_messages(str(self.log_path), [camera_topic]):
                 if timestamp < first_goal_time:
                     continue
-
-                if not isinstance(msg, CompressedVideo):
+                if not isinstance(msg, CompressedImage):
                     continue
-
-                normalized_format = msg.format.strip().lower()
-                if ffmpeg_input_format is None:
-                    ffmpeg_input_format = format_aliases.get(normalized_format)
-                    if ffmpeg_input_format is None:
-                        logger.warning(
-                            "Unsupported compressed video format '%s' on %s",
-                            msg.format,
-                            camera_topic,
-                        )
-                        if raw_video_path.exists():
-                            raw_video_path.unlink()
-                        return
-
-                raw_video_file.write(bytes(msg.data))
+                assert proc.stdin is not None
+                proc.stdin.write(bytes(msg.data))
                 frame_count += 1
+        finally:
+            assert proc.stdin is not None
+            proc.stdin.close()
+
+        _, stderr = proc.communicate()
 
         if frame_count == 0:
-            logger.warning("No compressed video frames found after first goal")
-            if raw_video_path.exists():
-                raw_video_path.unlink()
+            logger.warning("No JPEG frames found after first goal")
+            if self.camera_output_path.exists():
+                self.camera_output_path.unlink()
             return
 
-        logger.info("Remuxing %d frames to MP4 with ffmpeg...", frame_count)
-        command = [
-            "ffmpeg",
-            "-y",
-            "-r",
-            "25",
-            "-f",
-            ffmpeg_input_format,
-            "-i",
-            str(raw_video_path),
-            "-vf",
-            "scale=-2:720:flags=lanczos",
-            "-c:v",
-            "libx264",
-            "-preset",
-            "medium",
-            "-crf",
-            "24",
-            "-maxrate",
-            "12M",
-            "-bufsize",
-            "24M",
-            "-pix_fmt",
-            "yuv420p",
-            "-r",
-            "25",
-            "-movflags",
-            "+faststart",
-            str(self.camera_output_path),
-        ]
-        try:
-            completed = subprocess.run(
-                command,
-                check=True,
-                capture_output=True,
-                text=True,
-            )
-            if completed.stderr:
-                logger.info(completed.stderr.strip())
-        except subprocess.CalledProcessError as err:
-            logger.error("ffmpeg failed while creating camera video: %s", err.stderr)
+        if proc.returncode != 0:
+            logger.error("ffmpeg failed while creating camera video: %s", stderr.decode())
             return
-        finally:
-            if raw_video_path.exists():
-                raw_video_path.unlink()
 
-        logger.info("Saved camera video to %s", self.camera_output_path)
+        if stderr:
+            logger.info(stderr.decode().strip())
+
+        logger.info("Saved camera video (%d frames) to %s", frame_count, self.camera_output_path)
         self.emitter.emit(
             "camera_video",
             {
