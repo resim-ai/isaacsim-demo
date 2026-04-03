@@ -21,6 +21,9 @@ These match the ReSim CLI defaults for prod and the api-client e2e "staging" con
 Optional: GovCloud prod uses different URLs; run: resim govcloud enable (see resim --help).
 For other endpoints, run the same resim commands yourself with --url / --auth-url (or export
 RESIM_URL / RESIM_AUTH_URL) instead of this script.
+
+Build registration: metrics-builds + Isaac build are recreated when git HEAD, PROJECT_NAME,
+or RESIM_URL (staging vs prod) no longer matches DEMO_STATE_FILE. FORCE_NEW_BUILDS=1 always re-registers.
 EOF
 }
 
@@ -162,6 +165,8 @@ if [[ "${EXPERIENCES_CONFIG}" != /* ]]; then
 	EXPERIENCES_CONFIG="${REPO_ROOT}/${EXPERIENCES_CONFIG#./}"
 fi
 
+STATE_FILE="${DEMO_STATE_FILE:-${REPO_ROOT}/.demo_in_new_org_state}"
+
 ensure_project() {
 	if resim projects get --project "${PROJECT_NAME}" &>/dev/null; then
 		echo "Project already exists: ${PROJECT_NAME}"
@@ -274,6 +279,54 @@ ensure_demo_assets() {
 		"carter_warehouse_navigation_collected"
 }
 
+load_demo_state() {
+	DEMO_PROJECT_NAME=""
+	DEMO_RESIM_URL=""
+	DEMO_LAST_COMMIT_FULL=""
+	DEMO_NAV2_METRICS_BUILD_ID=""
+	DEMO_DEFAULT_REPORT_METRICS_BUILD_ID=""
+	DEMO_ISAAC_SIM_BUILD_ID=""
+	[[ -f "${STATE_FILE}" ]] || return 0
+	# shellcheck disable=SC1090
+	source "${STATE_FILE}"
+}
+
+try_reuse_registered_builds() {
+	if [[ -n "${FORCE_NEW_BUILDS:-}" ]]; then
+		return 1
+	fi
+	# IDs are scoped to a ReSim project and API host; never reuse across projects or orgs.
+	[[ -n "${DEMO_PROJECT_NAME}" ]] || return 1
+	[[ "${DEMO_PROJECT_NAME}" == "${PROJECT_NAME}" ]] || return 1
+	[[ -n "${DEMO_RESIM_URL}" ]] || return 1
+	[[ "${DEMO_RESIM_URL}" == "${RESIM_URL}" ]] || return 1
+	[[ -n "${DEMO_LAST_COMMIT_FULL}" ]] || return 1
+	[[ "${DEMO_LAST_COMMIT_FULL}" == "${COMMIT_SHA_FULL}" ]] || return 1
+	[[ -n "${DEMO_NAV2_METRICS_BUILD_ID}" ]] || return 1
+	[[ -n "${DEMO_DEFAULT_REPORT_METRICS_BUILD_ID}" ]] || return 1
+	[[ -n "${DEMO_ISAAC_SIM_BUILD_ID}" ]] || return 1
+	export NAV2_METRICS_BUILD_ID="${DEMO_NAV2_METRICS_BUILD_ID}"
+	export DEFAULT_REPORT_METRICS_BUILD_ID="${DEMO_DEFAULT_REPORT_METRICS_BUILD_ID}"
+	export ISAAC_SIM_BUILD_ID="${DEMO_ISAAC_SIM_BUILD_ID}"
+	echo "Reusing ReSim metrics + Isaac build IDs for project \"${PROJECT_NAME}\", commit ${COMMIT_SHA} (${COMMIT_SHA_FULL})."
+	echo "  (Set FORCE_NEW_BUILDS=1 to call metrics-builds create + builds create anyway.)"
+	return 0
+}
+
+save_demo_state() {
+	umask 077
+	{
+		printf 'DEMO_PROJECT_NAME=%q\n' "${PROJECT_NAME}"
+		printf 'DEMO_RESIM_URL=%q\n' "${RESIM_URL}"
+		printf 'DEMO_LAST_COMMIT_FULL=%q\n' "${COMMIT_SHA_FULL}"
+		printf 'DEMO_NAV2_METRICS_BUILD_ID=%q\n' "${NAV2_METRICS_BUILD_ID}"
+		printf 'DEMO_DEFAULT_REPORT_METRICS_BUILD_ID=%q\n' "${DEFAULT_REPORT_METRICS_BUILD_ID}"
+		printf 'DEMO_ISAAC_SIM_BUILD_ID=%q\n' "${ISAAC_SIM_BUILD_ID}"
+	} >"${STATE_FILE}.new"
+	mv "${STATE_FILE}.new" "${STATE_FILE}"
+	echo "Wrote ${STATE_FILE} (pin for project \"${PROJECT_NAME}\", API ${RESIM_URL}, commit ${COMMIT_SHA})."
+}
+
 # Function to pause execution
 pause() {
     echo "Press Enter to continue to the next command..."
@@ -290,43 +343,58 @@ ensure_project
 ensure_system
 # pause
 
-# Metrics builds before managed test suites so Demo Smoke can be created with --metrics-build / --metrics-set.
-_nav2_mb_out="$(
-	resim metrics-builds create --project "${PROJECT_NAME}" \
-		--name "Nav2 Metrics" \
-		--image "${METRICS_IMAGE}" \
-		--version "${METRICS_VERSION}" \
-		--systems "${SYSTEM_NAME}" \
-		--github
-)"
-echo "${_nav2_mb_out}"
-export NAV2_METRICS_BUILD_ID="$(printf '%s' "${_nav2_mb_out}" | grep -oE 'metrics_build_id=[a-f0-9-]{36}' | head -1 | cut -d= -f2)"
-if [[ -z "${NAV2_METRICS_BUILD_ID}" ]]; then
-	export NAV2_METRICS_BUILD_ID="$(printf '%s' "${_nav2_mb_out}" | sed -n 's/.*metrics_build_id=\([a-f0-9-]*\).*/\1/p' | head -1)"
+load_demo_state
+if [[ -f "${STATE_FILE}" ]] && [[ -n "${DEMO_PROJECT_NAME:-}" ]] && [[ "${DEMO_PROJECT_NAME}" != "${PROJECT_NAME}" ]]; then
+	echo "Note: ${STATE_FILE} is for project \"${DEMO_PROJECT_NAME}\" — will not reuse IDs for \"${PROJECT_NAME}\"."
 fi
-if [[ -z "${NAV2_METRICS_BUILD_ID}" ]]; then
-	echo "demo_in_new_org.sh: metrics-builds create (Nav2) did not print metrics_build_id=..." >&2
-	exit 1
+if [[ -f "${STATE_FILE}" ]] && [[ -n "${DEMO_RESIM_URL:-}" ]] && [[ "${DEMO_RESIM_URL}" != "${RESIM_URL}" ]]; then
+	echo "Note: ${STATE_FILE} is for RESIM_URL=${DEMO_RESIM_URL} — will not reuse IDs for current API (${RESIM_URL})."
 fi
-# pause
+REGISTERED_BUILDS_REUSED=0
+if try_reuse_registered_builds; then
+	REGISTERED_BUILDS_REUSED=1
+fi
 
-_default_rep_out="$(
-	resim metrics-builds create --project "${PROJECT_NAME}" \
-		--name "Default Report Metrics Build" \
-		--image public.ecr.aws/resim/open-metrics-builds/default-reports-build:sha-b64ef17bcd45d62bf0c1a09cad168372ffe87e9c \
-		--version "b64ef17bcd45d62bf0c1a09cad168372ffe87e9c" \
-		--github
-)"
-echo "${_default_rep_out}"
-export DEFAULT_REPORT_METRICS_BUILD_ID="$(printf '%s' "${_default_rep_out}" | grep -oE 'metrics_build_id=[a-f0-9-]{36}' | head -1 | cut -d= -f2)"
-if [[ -z "${DEFAULT_REPORT_METRICS_BUILD_ID}" ]]; then
-	export DEFAULT_REPORT_METRICS_BUILD_ID="$(printf '%s' "${_default_rep_out}" | sed -n 's/.*metrics_build_id=\([a-f0-9-]*\).*/\1/p' | head -1)"
+# New git commit => new metrics-builds + new Isaac build. Same commit => reuse IDs from STATE_FILE.
+if [[ "${REGISTERED_BUILDS_REUSED}" -eq 0 ]]; then
+	# Metrics builds before managed test suites so Demo Smoke can be created with --metrics-build / --metrics-set.
+	_nav2_mb_out="$(
+		resim metrics-builds create --project "${PROJECT_NAME}" \
+			--name "Nav2 Metrics" \
+			--image "${METRICS_IMAGE}" \
+			--version "${METRICS_VERSION}" \
+			--systems "${SYSTEM_NAME}" \
+			--github
+	)"
+	echo "${_nav2_mb_out}"
+	export NAV2_METRICS_BUILD_ID="$(printf '%s' "${_nav2_mb_out}" | grep -oE 'metrics_build_id=[a-f0-9-]{36}' | head -1 | cut -d= -f2)"
+	if [[ -z "${NAV2_METRICS_BUILD_ID}" ]]; then
+		export NAV2_METRICS_BUILD_ID="$(printf '%s' "${_nav2_mb_out}" | sed -n 's/.*metrics_build_id=\([a-f0-9-]*\).*/\1/p' | head -1)"
+	fi
+	if [[ -z "${NAV2_METRICS_BUILD_ID}" ]]; then
+		echo "demo_in_new_org.sh: metrics-builds create (Nav2) did not print metrics_build_id=..." >&2
+		exit 1
+	fi
+	# pause
+
+	_default_rep_out="$(
+		resim metrics-builds create --project "${PROJECT_NAME}" \
+			--name "Default Report Metrics Build" \
+			--image public.ecr.aws/resim/open-metrics-builds/default-reports-build:sha-b64ef17bcd45d62bf0c1a09cad168372ffe87e9c \
+			--version "b64ef17bcd45d62bf0c1a09cad168372ffe87e9c" \
+			--github
+	)"
+	echo "${_default_rep_out}"
+	export DEFAULT_REPORT_METRICS_BUILD_ID="$(printf '%s' "${_default_rep_out}" | grep -oE 'metrics_build_id=[a-f0-9-]{36}' | head -1 | cut -d= -f2)"
+	if [[ -z "${DEFAULT_REPORT_METRICS_BUILD_ID}" ]]; then
+		export DEFAULT_REPORT_METRICS_BUILD_ID="$(printf '%s' "${_default_rep_out}" | sed -n 's/.*metrics_build_id=\([a-f0-9-]*\).*/\1/p' | head -1)"
+	fi
+	if [[ -z "${DEFAULT_REPORT_METRICS_BUILD_ID}" ]]; then
+		echo "demo_in_new_org.sh: metrics-builds create (default reports) did not print metrics_build_id=..." >&2
+		exit 1
+	fi
+	# pause
 fi
-if [[ -z "${DEFAULT_REPORT_METRICS_BUILD_ID}" ]]; then
-	echo "demo_in_new_org.sh: metrics-builds create (default reports) did not print metrics_build_id=..." >&2
-	exit 1
-fi
-# pause
 
 # Experiences first (managedTestSuites empty), then create missing suites (Demo Smoke includes metrics), then full sync.
 sync_experiences_without_managed_suites
@@ -338,20 +406,23 @@ sync_experiences_full_config
 ensure_demo_assets
 # pause
 
-# Set up the system build (ISAACSIM_IMAGE / NAV2_IMAGE / METRICS_IMAGE from ecr_compose_env.sh)
-_build_out="$(
-	resim builds create --project "${PROJECT_NAME}" --build-spec ./builds/docker-compose.yml \
-		--system "${SYSTEM_NAME}" --name "Isaac Sim Build @ ${COMMIT_SHA}" --description "Isaac Sim Nav2 demo build" \
-		--branch "main" --version "${COMMIT_SHA_FULL}" --auto-create-branch --github --use-os-env \
-		--assets "collected_hospital_demo,carter_warehouse_navigation_collected"
-)"
-echo "${_build_out}"
-export ISAAC_SIM_BUILD_ID="$(printf '%s' "${_build_out}" | grep -oE 'build_id=[a-f0-9-]{36}' | head -1 | cut -d= -f2)"
-if [[ -z "${ISAAC_SIM_BUILD_ID}" ]]; then
-	echo "demo_in_new_org.sh: builds create did not print build_id=... (see output above)" >&2
-	exit 1
+if [[ "${REGISTERED_BUILDS_REUSED}" -eq 0 ]]; then
+	# Set up the system build (ISAACSIM_IMAGE / NAV2_IMAGE / METRICS_IMAGE from ecr_compose_env.sh)
+	_build_out="$(
+		resim builds create --project "${PROJECT_NAME}" --build-spec ./builds/docker-compose.yml \
+			--system "${SYSTEM_NAME}" --name "Isaac Sim Build @ ${COMMIT_SHA}" --description "Isaac Sim Nav2 demo build" \
+			--branch "main" --version "${COMMIT_SHA_FULL}" --auto-create-branch --github --use-os-env \
+			--assets "collected_hospital_demo,carter_warehouse_navigation_collected"
+	)"
+	echo "${_build_out}"
+	export ISAAC_SIM_BUILD_ID="$(printf '%s' "${_build_out}" | grep -oE 'build_id=[a-f0-9-]{36}' | head -1 | cut -d= -f2)"
+	if [[ -z "${ISAAC_SIM_BUILD_ID}" ]]; then
+		echo "demo_in_new_org.sh: builds create did not print build_id=... (see output above)" >&2
+		exit 1
+	fi
+	save_demo_state
+	# pause
 fi
-# pause
 
 # Run the batch
 resim test-suites run --project "${PROJECT_NAME}" \
