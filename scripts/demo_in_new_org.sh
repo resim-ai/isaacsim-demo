@@ -2,16 +2,18 @@
 
 set -euo pipefail
 
-PROJECT_NAME="An Isaac Sim Sandbox"
-REGISTRY="909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images"
+PROJECT_NAME="Lain's Isaac Sim Sandbox"
 
-# Update SHA to the short commit SHA from the latest CI build (visible in ECR image tags).
-SHA="b924075"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=ecr_compose_env.sh
+source "${SCRIPT_DIR}/ecr_compose_env.sh"
 
-# Metrics build — update to the SHA tag produced by the latest CI run for the
-# metrics container (tagged as isaac-sim-metrics-<sha> in ECR).
-METRICS_IMAGE="${REGISTRY}:isaac-sim-metrics-${SHA}"
-METRICS_VERSION="ee1de385c6e5eb71d41d27004b1931e3752aa91c"
+# ReSim --version fields use full git SHA (same as CI).
+if [ -z "${COMMIT_SHA_FULL}" ]; then
+	echo "demo_in_new_org.sh: need a git checkout (or set COMMIT_SHA_FULL) for ReSim build/metrics versions" >&2
+	exit 1
+fi
+METRICS_VERSION="${METRICS_VERSION:-${COMMIT_SHA_FULL}}"
 
 # Function to pause execution
 pause() {
@@ -52,12 +54,10 @@ export DEFAULT_REPORT_METRICS_BUILD_ID="$(resim metrics-builds create --project 
 	--github | sed 's/.*=//')"
 # pause
 
-# Set up the system build
-export ISAACSIM_IMAGE="${REGISTRY}:isaacsim-mcb-isaacsim-${SHA}"
-export NAV2_IMAGE="${REGISTRY}:isaacsim-mcb-nav2-${SHA}"
+# Set up the system build (ISAACSIM_IMAGE / NAV2_IMAGE / METRICS_IMAGE from ecr_compose_env.sh)
 export ISAAC_SIM_BUILD_ID="$(resim builds create --project "${PROJECT_NAME}" --build-spec ./builds/docker-compose.yml \
-  --system "Isaac Sim" --name "Isaac Sim Build @ ${SHA}" --description "Isaac Sim Nav2 demo build" \
-  --branch "main" --version "${SHA}" --auto-create-branch --github --use-os-env \
+  --system "Isaac Sim" --name "Isaac Sim Build @ ${COMMIT_SHA}" --description "Isaac Sim Nav2 demo build" \
+  --branch "main" --version "${COMMIT_SHA_FULL}" --auto-create-branch --github --use-os-env \
   --assets "collected_hospital_demo:0,carter_warehouse_navigation_collected:0" | sed 's/.*=//')"
 # pause
 
