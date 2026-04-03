@@ -8,7 +8,7 @@ Use this when you want the Isaac Sim demos (experiences, test suites, metrics, a
 
 ### Prerequisites
 
-1. **ReSim CLI** installed and authenticated for the **target** org (however your team switches orgs or API keys—do that before running any `resim` commands).
+1. **ReSim CLI** available on your `PATH` and authenticated for the **target** org—or run [`scripts/demo_in_new_org.sh`](scripts/demo_in_new_org.sh), which **installs** the CLI (and **yq**) into `~/.local/bin` when missing, using **curl** or **wget**. Add that directory to your `PATH` in new shells, or set **`DEMO_LOCAL_BIN`** to another writable directory.
 2. A **git checkout** of this repo on the commit whose images you intend to use (tags are derived from the current `HEAD` unless you override them—see below).
 3. **Container images in ECR** for that commit: either rely on CI pushes to `909785973729.dkr.ecr.us-east-1.amazonaws.com/isaacsim-test-images` (tags match `.github/workflows/docker-build.yml`), or build and push yourself with `./scripts/build_and_push.sh` after AWS/ECR login.
 
@@ -32,18 +32,22 @@ That exports `ISAACSIM_IMAGE`, `NAV2_IMAGE`, and `METRICS_IMAGE`, plus `COMMIT_S
 
 ### Scripted bootstrap (starting point)
 
-[`scripts/demo_in_new_org.sh`](scripts/demo_in_new_org.sh) is an end-to-end example: it creates a project and system, runs [`resim experiences sync`](./resim_experience_sync.yaml), registers metrics builds (including the Nav2 metrics image and the default reports image), registers an Isaac Sim **build** from [`builds/docker-compose.yml`](builds/docker-compose.yml) with `--use-os-env`, wires **Demo Smoke** to the Nav2 metrics build, and kicks off a test suite run.
+[`scripts/demo_in_new_org.sh`](scripts/demo_in_new_org.sh) is an end-to-end example: it **upserts** the project (create if missing; the CLI cannot update project metadata) and system (**`resim system update`** when **Isaac Sim** already exists), then registers **metrics builds** (Nav2 metrics image + default reports image) so **`test-suites create`** can attach **`--metrics-build`** / **`--metrics-set`** to **Demo Smoke** up front—no separate **`suites revise`**. It then reconciles experiences and **managed test suites** from [`resim_experience_sync.yaml`](./resim_experience_sync.yaml) in three steps: (1) **`resim experiences sync`** with `managedTestSuites` cleared so experiences exist, (2) **`resim test-suites create`** for missing `managedTestSuites` entries (Demo Smoke includes the Nav2 metrics build and **Nav2 Metrics** set), and (3) a full **`resim experiences sync`**. Finally it **`resim assets create`** for the two Isaac demo bundles if missing, **`resim builds create`** with `--use-os-env` and **`--assets`**, and **`resim test-suites run`** on Demo Smoke.
 
 Before running it:
 
 - Edit **`PROJECT_NAME`** (and any suite names or asset IDs if your org’s setup differs).
-- Ensure you are on the CLI’s **target org** and that the ECR tags for `COMMIT_SHA` **exist** (or push them first).
+- Choose **staging vs production** for the ReSim API (required). The script sets the same variables the CLI uses: **`RESIM_URL`** and **`RESIM_AUTH_URL`** (equivalent to global flags `--url` / `--auth-url`; see `resim --help`).
+- Ensure you are signed in to the correct **org** for that environment and that the ECR tags for `COMMIT_SHA` **exist** (or push them first).
 
 Run from the repository root:
 
 ```bash
-./scripts/demo_in_new_org.sh
+./scripts/demo_in_new_org.sh --staging   # api.resim.io + resim-dev Auth0
+./scripts/demo_in_new_org.sh --prod      # api.resim.ai + resim Auth0
 ```
+
+The flag always sets `RESIM_URL` and `RESIM_AUTH_URL` for that run. Run `./scripts/demo_in_new_org.sh --help` for the exact URLs.
 
 The script will fail early if `COMMIT_SHA_FULL` is missing (no git metadata); fix by using a proper clone or set `COMMIT_SHA_FULL` manually for ReSim version fields.
 
@@ -53,10 +57,10 @@ If you prefer not to use the script, mirror these steps with the ReSim CLI:
 
 1. `resim projects create` — create the destination project.
 2. `resim system create` — create the **Isaac Sim** system (adjust GPUs / memory / vCPUs as needed).
-3. `resim experiences sync` — apply [`resim_experience_sync.yaml`](./resim_experience_sync.yaml) so experiences and managed suites exist.
-4. `resim metrics-builds create` — register the Nav2 metrics image (`METRICS_IMAGE` after sourcing `ecr_compose_env.sh`) and optionally the default reports image (see the script for the public image URI).
-5. `source scripts/ecr_compose_env.sh` then `resim builds create` with `--build-spec ./builds/docker-compose.yml` and **`--use-os-env`** so `ISAACSIM_IMAGE` / `NAV2_IMAGE` are picked up.
-6. `resim suites revise` — attach the metrics build and metrics set to the suite you plan to run (e.g. **Demo Smoke**).
+3. `resim metrics-builds create` — register the Nav2 metrics image (`METRICS_IMAGE` after sourcing `ecr_compose_env.sh`) and optionally the default reports image (see the script for the public image URI). Do this **before** creating test suites that reference a metrics build.
+4. `resim experiences sync` — use the same three-phase managed-suite flow as [`scripts/demo_in_new_org.sh`](scripts/demo_in_new_org.sh); when you **`resim test-suites create`** **Demo Smoke**, pass **`--metrics-build`** and **`--metrics-set`** (`Nav2 Metrics`) so you do not need a later **`suites revise`**.
+5. `resim assets create` — for each asset referenced by **`resim builds create --assets`** (here **`collected_hospital_demo`** and **`carter_warehouse_navigation_collected`**), with **locations** (S3) and **`--mount-folder`** set to the **leaf name only** (e.g. `collected_hospital_demo`); ReSim mounts under **`/tmp/resim/assets/<mount-folder>`**, so do not pass the full **`/tmp/resim/assets/...`** path as the mount folder.
+6. `source scripts/ecr_compose_env.sh` then `resim builds create` with `--build-spec ./builds/docker-compose.yml`, **`--use-os-env`**, and **`--assets collected_hospital_demo,carter_warehouse_navigation_collected`** (latest revision each), or pin with **`name:<revision>`** where `<revision>` is the API asset revision—not UI “version 0”. **`name:0` is usually wrong** for newly created assets and can leave Isaac Sim without staged files, so **`LoadWorld`** fails for paths under **`/tmp/resim/assets/...`**.
 7. `resim test-suites run` — run a batch against that build (see [`.resim/metrics/config.resim.yml`](.resim/metrics/config.resim.yml) for metrics sync flags used in automation).
 
 ### Pushing images from your machine

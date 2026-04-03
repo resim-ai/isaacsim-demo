@@ -285,19 +285,31 @@ class MetricsRunner:
 
         frame_count = 0
         try:
+            assert proc.stdin is not None
             for _, msg, timestamp in read_messages(str(self.log_path), [camera_topic]):
                 if timestamp < first_goal_time:
                     continue
                 if not isinstance(msg, CompressedImage):
                     continue
-                assert proc.stdin is not None
-                proc.stdin.write(bytes(msg.data))
+                try:
+                    proc.stdin.write(bytes(msg.data))
+                except BrokenPipeError:
+                    logger.warning(
+                        "ffmpeg closed stdin before all frames were written (encoder exited early)"
+                    )
+                    break
                 frame_count += 1
         finally:
-            assert proc.stdin is not None
-            proc.stdin.close()
+            if proc.stdin is not None and not proc.stdin.closed:
+                try:
+                    proc.stdin.close()
+                except (ValueError, OSError):
+                    pass
 
-        _, stderr = proc.communicate()
+        # Do not call communicate() after closing stdin: it tries to flush stdin and can raise
+        # ValueError: flush of closed file (Python 3.11+).
+        stderr = proc.stderr.read() if proc.stderr is not None else b""
+        proc.wait()
 
         if frame_count == 0:
             logger.warning("No JPEG frames found after first goal")
@@ -306,11 +318,14 @@ class MetricsRunner:
             return
 
         if proc.returncode != 0:
-            logger.error("ffmpeg failed while creating camera video: %s", stderr.decode())
+            logger.error(
+                "ffmpeg failed while creating camera video: %s",
+                stderr.decode(errors="replace"),
+            )
             return
 
         if stderr:
-            logger.info(stderr.decode().strip())
+            logger.info(stderr.decode(errors="replace").strip())
 
         logger.info("Saved camera video (%d frames) to %s", frame_count, self.camera_output_path)
         self.emitter.emit(
