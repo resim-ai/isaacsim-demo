@@ -140,12 +140,14 @@ ensure_yq() {
 ensure_resim_cli
 ensure_yq
 
-PROJECT_NAME="Iain's Isaac Sim Sandbox"
+PROJECT_NAME="New Isaac Sim Sandbox"
 PROJECT_DESCRIPTION="A project for running the Nav2 Demo"
 SYSTEM_NAME="Isaac Sim"
 SYSTEM_DESCRIPTION="A system for running Isaac Sim"
-# Test suite that runs the Nav2 demo batch; created with Nav2 metrics build + set (no later suites revise).
+# Managed suites: smoke (optional manual use), warehouse + hospital batches kicked off at end of script.
 DEMO_SMOKE_SUITE_NAME="${DEMO_SMOKE_SUITE_NAME:-Demo Smoke}"
+WAREHOUSE_DEMO_SUITE_NAME="${WAREHOUSE_DEMO_SUITE_NAME:-Warehouse Demo}"
+HOSPITAL_DEMO_SUITE_NAME="${HOSPITAL_DEMO_SUITE_NAME:-Hospital Demo}"
 NAV2_METRICS_SET_NAME="${NAV2_METRICS_SET_NAME:-Nav2 Metrics}"
 EXPERIENCES_CONFIG="${EXPERIENCES_CONFIG:-./resim_experience_sync.yaml}"
 
@@ -206,6 +208,14 @@ sync_experiences_without_managed_suites() (
 	resim experiences sync --project "${PROJECT_NAME}" --experiences-config "${tmp}"
 )
 
+# Nav2 metrics build + set attached at suite create (no later suites revise).
+managed_suite_uses_nav2_metrics() {
+	local n="$1"
+	[[ "${n}" == "${DEMO_SMOKE_SUITE_NAME}" ]] ||
+		[[ "${n}" == "${WAREHOUSE_DEMO_SUITE_NAME}" ]] ||
+		[[ "${n}" == "${HOSPITAL_DEMO_SUITE_NAME}" ]]
+}
+
 ensure_managed_test_suites_from_config() {
 	local n i name desc exp_csv
 	n="$(yq '(.managedTestSuites // []) | length' "${EXPERIENCES_CONFIG}")"
@@ -235,9 +245,9 @@ ensure_managed_test_suites_from_config() {
 			resim test-suites create --project "${PROJECT_NAME}" --system "${SYSTEM_NAME}"
 			--name "${name}" --description "${desc}" --experiences "${exp_csv}"
 		)
-		if [[ "${name}" == "${DEMO_SMOKE_SUITE_NAME}" ]]; then
+		if managed_suite_uses_nav2_metrics "${name}"; then
 			if [[ -z "${NAV2_METRICS_BUILD_ID:-}" ]]; then
-				echo "demo_in_new_org.sh: NAV2_METRICS_BUILD_ID must be set before creating ${DEMO_SMOKE_SUITE_NAME}" >&2
+				echo "demo_in_new_org.sh: NAV2_METRICS_BUILD_ID must be set before creating ${name}" >&2
 				exit 1
 			fi
 			create_cmd+=(--metrics-build "${NAV2_METRICS_BUILD_ID}" --metrics-set "${NAV2_METRICS_SET_NAME}")
@@ -357,7 +367,7 @@ fi
 
 # New git commit => new metrics-builds + new Isaac build. Same commit => reuse IDs from STATE_FILE.
 if [[ "${REGISTERED_BUILDS_REUSED}" -eq 0 ]]; then
-	# Metrics builds before managed test suites so Demo Smoke can be created with --metrics-build / --metrics-set.
+	# Metrics builds before managed test suites so suites that use Nav2 metrics can be created with --metrics-build / --metrics-set.
 	_nav2_mb_out="$(
 		resim metrics-builds create --project "${PROJECT_NAME}" \
 			--name "Nav2 Metrics" \
@@ -396,7 +406,7 @@ if [[ "${REGISTERED_BUILDS_REUSED}" -eq 0 ]]; then
 	# pause
 fi
 
-# Experiences first (managedTestSuites empty), then create missing suites (Demo Smoke includes metrics), then full sync.
+# Experiences first (managedTestSuites empty), then create missing suites (Demo Smoke / Warehouse / Hospital get Nav2 metrics), then full sync.
 sync_experiences_without_managed_suites
 ensure_managed_test_suites_from_config
 sync_experiences_full_config
@@ -424,16 +434,25 @@ if [[ "${REGISTERED_BUILDS_REUSED}" -eq 0 ]]; then
 	# pause
 fi
 
-# Run the batch
-resim test-suites run --project "${PROJECT_NAME}" \
-  --test-suite "${DEMO_SMOKE_SUITE_NAME}" \
-  --batch-name "Nav2 Demo" \
-  --build-id "${ISAAC_SIM_BUILD_ID}" \
-  --pool-labels 'resim:metrics2:k8s' \
-  --sync-metrics-config --metrics-config-path .resim/metrics/config.resim.yml \
-  --allowable-failure-percent 25
+run_nav2_experience_batch() {
+	local suite_name="$1"
+	local batch_name="$2"
+	echo "Starting test batch: ${batch_name} (suite: ${suite_name})"
+	resim test-suites run --project "${PROJECT_NAME}" \
+		--test-suite "${suite_name}" \
+		--batch-name "${batch_name}" \
+		--build-id "${ISAAC_SIM_BUILD_ID}" \
+		--pool-labels 'resim:metrics2:k8s' \
+		--sync-metrics-config --metrics-config-path .resim/metrics/config.resim.yml \
+		--allowable-failure-percent 25
+}
+
+# Warehouse suite first, then the larger hospital suite (same build + metrics sync flags).
+run_nav2_experience_batch "${WAREHOUSE_DEMO_SUITE_NAME}" "Warehouse Demo @ ${COMMIT_SHA}"
+run_nav2_experience_batch "${HOSPITAL_DEMO_SUITE_NAME}" "Hospital Demo @ ${COMMIT_SHA}"
 # pause
 
-echo "Once the above batch is complete, run the report using the following command (same API/auth as this run):"
-printf 'export RESIM_URL=%q RESIM_AUTH_URL=%q\n' "${RESIM_URL}" "${RESIM_AUTH_URL}"
-echo "resim reports create --branch main --metrics-build-id $DEFAULT_REPORT_METRICS_BUILD_ID --project \"${PROJECT_NAME}\" --test-suite \"${DEMO_SMOKE_SUITE_NAME}\" --length 1"
+# echo "Once batches complete, create reports (same API/auth as this run), for example:"
+# printf 'export RESIM_URL=%q RESIM_AUTH_URL=%q\n' "${RESIM_URL}" "${RESIM_AUTH_URL}"
+# echo "resim reports create --branch main --metrics-build-id ${DEFAULT_REPORT_METRICS_BUILD_ID} --project \"${PROJECT_NAME}\" --test-suite \"${WAREHOUSE_DEMO_SUITE_NAME}\" --length 1"
+# echo "resim reports create --branch main --metrics-build-id ${DEFAULT_REPORT_METRICS_BUILD_ID} --project \"${PROJECT_NAME}\" --test-suite \"${HOSPITAL_DEMO_SUITE_NAME}\" --length 1"
