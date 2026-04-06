@@ -25,8 +25,9 @@ RESIM_URL / RESIM_AUTH_URL) instead of this script.
 Build registration: metrics-builds + Isaac build are recreated when git HEAD, PROJECT_NAME,
 RESIM_URL, or the ReSim project UUID no longer matches DEMO_STATE_FILE. The state file stores
 DEMO_PROJECT_ID so the same project *name* in another org does not reuse another org's build IDs.
-FORCE_NEW_BUILDS=1 always re-registers. Remove DEMO_STATE_FILE when moving to a different org if
-you want a clean pin (older state files without DEMO_PROJECT_ID are never reused).
+If the state file is stale (wrong project name, API URL, project ID, commit, or missing
+DEMO_PROJECT_ID), it is deleted and in-memory pins cleared so no old build IDs leak from disk
+or from a parent shell. FORCE_NEW_BUILDS=1 always re-registers.
 
   --yes, -y  Skip the "Press Enter to continue" org check (also skipped when stdin is not a TTY).
              Or set DEMO_ASSUME_YES=1 before running.
@@ -179,6 +180,27 @@ fi
 
 STATE_FILE="${DEMO_STATE_FILE:-${REPO_ROOT}/.demo_in_new_org_state}"
 
+# Avoid reusing IDs from an unrelated shell session (exported before this script ran).
+unset NAV2_METRICS_BUILD_ID DEFAULT_REPORT_METRICS_BUILD_ID ISAAC_SIM_BUILD_ID 2>/dev/null || true
+
+clear_demo_state_vars() {
+	DEMO_PROJECT_NAME=""
+	DEMO_RESIM_URL=""
+	DEMO_PROJECT_ID=""
+	DEMO_LAST_COMMIT_FULL=""
+	DEMO_NAV2_METRICS_BUILD_ID=""
+	DEMO_DEFAULT_REPORT_METRICS_BUILD_ID=""
+	DEMO_ISAAC_SIM_BUILD_ID=""
+}
+
+# Drop stale on-disk state and clear sourced DEMO_* so we never mix orgs/projects/commits.
+reset_demo_state_file() {
+	local reason="$1"
+	echo "Resetting demo state (${reason}): removing ${STATE_FILE}" >&2
+	rm -f "${STATE_FILE}"
+	clear_demo_state_vars
+}
+
 ensure_project() {
 	echo "Ensuring project \"${PROJECT_NAME}\" (projects get)..."
 	# Do not redirect stdout: ReSim prints device-login / auth instructions on stdout.
@@ -318,16 +340,42 @@ get_current_project_id() {
 }
 
 load_demo_state() {
-	DEMO_PROJECT_NAME=""
-	DEMO_RESIM_URL=""
-	DEMO_PROJECT_ID=""
-	DEMO_LAST_COMMIT_FULL=""
-	DEMO_NAV2_METRICS_BUILD_ID=""
-	DEMO_DEFAULT_REPORT_METRICS_BUILD_ID=""
-	DEMO_ISAAC_SIM_BUILD_ID=""
+	clear_demo_state_vars
 	[[ -f "${STATE_FILE}" ]] || return 0
 	# shellcheck disable=SC1090
 	source "${STATE_FILE}"
+}
+
+# After ensure_project: if context does not match the state file, delete it (and clear vars).
+# Handles new org, recreated project, staging↔prod, legacy files without DEMO_PROJECT_ID, and
+# stray exports from the parent shell (cleared above + here when file is removed).
+invalidate_stale_demo_state() {
+	[[ -f "${STATE_FILE}" ]] || return 0
+	if [[ -n "${DEMO_PROJECT_NAME:-}" && "${DEMO_PROJECT_NAME}" != "${PROJECT_NAME}" ]]; then
+		reset_demo_state_file "project name \"${DEMO_PROJECT_NAME}\" != \"${PROJECT_NAME}\""
+		return 0
+	fi
+	if [[ -n "${DEMO_RESIM_URL:-}" && "${DEMO_RESIM_URL}" != "${RESIM_URL}" ]]; then
+		reset_demo_state_file "stored RESIM_URL != current API host"
+		return 0
+	fi
+	if [[ -z "${DEMO_PROJECT_ID:-}" ]]; then
+		reset_demo_state_file "missing DEMO_PROJECT_ID (legacy or copied state)"
+		return 0
+	fi
+	if [[ -n "${DEMO_LAST_COMMIT_FULL:-}" && "${DEMO_LAST_COMMIT_FULL}" != "${COMMIT_SHA_FULL}" ]]; then
+		reset_demo_state_file "git commit changed (${DEMO_LAST_COMMIT_FULL} -> ${COMMIT_SHA_FULL})"
+		return 0
+	fi
+	local current_pid
+	if ! current_pid="$(get_current_project_id)"; then
+		echo "demo_in_new_org.sh: could not verify current project ID; leaving ${STATE_FILE} unchanged" >&2
+		return 0
+	fi
+	if [[ "${current_pid}" != "${DEMO_PROJECT_ID}" ]]; then
+		reset_demo_state_file "ReSim projectID mismatch (new org, new project, or recreated project)"
+		return 0
+	fi
 }
 
 try_reuse_registered_builds() {
@@ -406,12 +454,7 @@ ensure_system
 # pause
 
 load_demo_state
-if [[ -f "${STATE_FILE}" ]] && [[ -n "${DEMO_PROJECT_NAME:-}" ]] && [[ "${DEMO_PROJECT_NAME}" != "${PROJECT_NAME}" ]]; then
-	echo "Note: ${STATE_FILE} is for project \"${DEMO_PROJECT_NAME}\" — will not reuse IDs for \"${PROJECT_NAME}\"."
-fi
-if [[ -f "${STATE_FILE}" ]] && [[ -n "${DEMO_RESIM_URL:-}" ]] && [[ "${DEMO_RESIM_URL}" != "${RESIM_URL}" ]]; then
-	echo "Note: ${STATE_FILE} is for RESIM_URL=${DEMO_RESIM_URL} — will not reuse IDs for current API (${RESIM_URL})."
-fi
+invalidate_stale_demo_state
 REGISTERED_BUILDS_REUSED=0
 if try_reuse_registered_builds; then
 	REGISTERED_BUILDS_REUSED=1
