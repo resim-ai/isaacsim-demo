@@ -8,7 +8,7 @@ set -euo pipefail
 
 usage() {
 	cat <<'EOF' >&2
-Usage: demo_in_new_org.sh --staging | --prod
+Usage: demo_in_new_org.sh --staging | --prod [--yes]
 
   --staging  Staging: RESIM_URL=https://api.resim.io/v1/
              RESIM_AUTH_URL=https://resim-dev.us.auth0.com/
@@ -23,7 +23,13 @@ For other endpoints, run the same resim commands yourself with --url / --auth-ur
 RESIM_URL / RESIM_AUTH_URL) instead of this script.
 
 Build registration: metrics-builds + Isaac build are recreated when git HEAD, PROJECT_NAME,
-or RESIM_URL (staging vs prod) no longer matches DEMO_STATE_FILE. FORCE_NEW_BUILDS=1 always re-registers.
+RESIM_URL, or the ReSim project UUID no longer matches DEMO_STATE_FILE. The state file stores
+DEMO_PROJECT_ID so the same project *name* in another org does not reuse another org's build IDs.
+FORCE_NEW_BUILDS=1 always re-registers. Remove DEMO_STATE_FILE when moving to a different org if
+you want a clean pin (older state files without DEMO_PROJECT_ID are never reused).
+
+  --yes, -y  Skip the "Press Enter to continue" org check (also skipped when stdin is not a TTY).
+             Or set DEMO_ASSUME_YES=1 before running.
 EOF
 }
 
@@ -36,6 +42,10 @@ while [[ $# -gt 0 ]]; do
 			;;
 		--prod)
 			RESIM_ENV=prod
+			shift
+			;;
+		--yes | -y)
+			DEMO_ASSUME_YES=1
 			shift
 			;;
 		-h | --help)
@@ -140,7 +150,7 @@ ensure_yq() {
 ensure_resim_cli
 ensure_yq
 
-PROJECT_NAME="New Isaac Sim Sandbox"
+PROJECT_NAME="Isaac Sim Sandbox"
 PROJECT_DESCRIPTION="A project for running the Nav2 Demo"
 SYSTEM_NAME="Isaac Sim"
 SYSTEM_DESCRIPTION="A system for running Isaac Sim"
@@ -170,10 +180,13 @@ fi
 STATE_FILE="${DEMO_STATE_FILE:-${REPO_ROOT}/.demo_in_new_org_state}"
 
 ensure_project() {
-	if resim projects get --project "${PROJECT_NAME}" &>/dev/null; then
+	echo "Ensuring project \"${PROJECT_NAME}\" (projects get)..."
+	# Do not redirect stdout: ReSim prints device-login / auth instructions on stdout.
+	if resim projects get --project "${PROJECT_NAME}"; then
 		echo "Project already exists: ${PROJECT_NAME}"
 		return 0
 	fi
+	echo "Creating project \"${PROJECT_NAME}\"..."
 	resim projects create --name "${PROJECT_NAME}" --description "${PROJECT_DESCRIPTION}"
 }
 
@@ -185,13 +198,15 @@ ensure_system() {
 		--metrics-build-vcpus 2
 		--metrics-build-memory-mib 8192
 	)
-	if resim system get --project "${PROJECT_NAME}" --system "${SYSTEM_NAME}" &>/dev/null; then
+	echo "Ensuring system \"${SYSTEM_NAME}\" (system get)..."
+	if resim system get --project "${PROJECT_NAME}" --system "${SYSTEM_NAME}"; then
 		echo "System already exists: updating ${SYSTEM_NAME}..."
 		resim system update --project "${PROJECT_NAME}" --system "${SYSTEM_NAME}" \
 			--name "${SYSTEM_NAME}" --description "${SYSTEM_DESCRIPTION}" \
 			"${sys_resources[@]}"
 		return 0
 	fi
+	echo "Creating system \"${SYSTEM_NAME}\"..."
 	resim system create --project "${PROJECT_NAME}" \
 		--name "${SYSTEM_NAME}" --description "${SYSTEM_DESCRIPTION}" \
 		"${sys_resources[@]}"
@@ -230,7 +245,7 @@ ensure_managed_test_suites_from_config() {
 			echo "demo_in_new_org.sh: managedTestSuites[${i}] missing name" >&2
 			exit 1
 		fi
-		if resim test-suites get --project "${PROJECT_NAME}" --test-suite "${name}" &>/dev/null; then
+		if resim test-suites get --project "${PROJECT_NAME}" --test-suite "${name}"; then
 			echo "  Test suite exists: ${name}"
 			continue
 		fi
@@ -269,7 +284,8 @@ sync_experiences_full_config() {
 # mount-folder is the leaf directory name only; ReSim prepends /tmp/resim/assets/ (do not pass the full path).
 ensure_asset() {
 	local name="$1" desc="$2" locations="$3" mount="$4" version="${5:-1}"
-	if resim assets get --project "${PROJECT_NAME}" --asset "${name}" &>/dev/null; then
+	echo "Ensuring asset \"${name}\" (assets get)..."
+	if resim assets get --project "${PROJECT_NAME}" --asset "${name}"; then
 		echo "Asset already exists: ${name}"
 		return 0
 	fi
@@ -289,9 +305,22 @@ ensure_demo_assets() {
 		"carter_warehouse_navigation_collected"
 }
 
+# resim projects get --project <name> emits JSON with .projectID (unique per ReSim project; differs across orgs for the same name).
+get_current_project_id() {
+	local json pid
+	json="$(resim projects get --project "${PROJECT_NAME}")" || return 1
+	pid="$(printf '%s' "${json}" | yq -r '.projectID // empty')"
+	if [[ -z "${pid}" || "${pid}" == "null" ]]; then
+		echo "demo_in_new_org.sh: could not parse .projectID from resim projects get output" >&2
+		return 1
+	fi
+	printf '%s' "${pid}"
+}
+
 load_demo_state() {
 	DEMO_PROJECT_NAME=""
 	DEMO_RESIM_URL=""
+	DEMO_PROJECT_ID=""
 	DEMO_LAST_COMMIT_FULL=""
 	DEMO_NAV2_METRICS_BUILD_ID=""
 	DEMO_DEFAULT_REPORT_METRICS_BUILD_ID=""
@@ -310,6 +339,17 @@ try_reuse_registered_builds() {
 	[[ "${DEMO_PROJECT_NAME}" == "${PROJECT_NAME}" ]] || return 1
 	[[ -n "${DEMO_RESIM_URL}" ]] || return 1
 	[[ "${DEMO_RESIM_URL}" == "${RESIM_URL}" ]] || return 1
+	if [[ -z "${DEMO_PROJECT_ID:-}" ]]; then
+		echo "Not reusing ${STATE_FILE}: missing DEMO_PROJECT_ID (older state). Will register new metrics/builds for this org."
+		return 1
+	fi
+	local current_pid
+	current_pid="$(get_current_project_id)" || return 1
+	if [[ "${current_pid}" != "${DEMO_PROJECT_ID}" ]]; then
+		echo "Not reusing ${STATE_FILE}: state project ID ${DEMO_PROJECT_ID} != current project ${current_pid}."
+		echo "  (Same project name in another ReSim org is a different project — delete ${STATE_FILE} or use FORCE_NEW_BUILDS=1.)"
+		return 1
+	fi
 	[[ -n "${DEMO_LAST_COMMIT_FULL}" ]] || return 1
 	[[ "${DEMO_LAST_COMMIT_FULL}" == "${COMMIT_SHA_FULL}" ]] || return 1
 	[[ -n "${DEMO_NAV2_METRICS_BUILD_ID}" ]] || return 1
@@ -318,33 +358,45 @@ try_reuse_registered_builds() {
 	export NAV2_METRICS_BUILD_ID="${DEMO_NAV2_METRICS_BUILD_ID}"
 	export DEFAULT_REPORT_METRICS_BUILD_ID="${DEMO_DEFAULT_REPORT_METRICS_BUILD_ID}"
 	export ISAAC_SIM_BUILD_ID="${DEMO_ISAAC_SIM_BUILD_ID}"
-	echo "Reusing ReSim metrics + Isaac build IDs for project \"${PROJECT_NAME}\", commit ${COMMIT_SHA} (${COMMIT_SHA_FULL})."
+	echo "Reusing ReSim metrics + Isaac build IDs for project \"${PROJECT_NAME}\" (projectID=${DEMO_PROJECT_ID}), commit ${COMMIT_SHA} (${COMMIT_SHA_FULL})."
 	echo "  (Set FORCE_NEW_BUILDS=1 to call metrics-builds create + builds create anyway.)"
 	return 0
 }
 
 save_demo_state() {
+	local pin_project_id
+	pin_project_id="$(get_current_project_id)" || exit 1
 	umask 077
 	{
 		printf 'DEMO_PROJECT_NAME=%q\n' "${PROJECT_NAME}"
 		printf 'DEMO_RESIM_URL=%q\n' "${RESIM_URL}"
+		printf 'DEMO_PROJECT_ID=%q\n' "${pin_project_id}"
 		printf 'DEMO_LAST_COMMIT_FULL=%q\n' "${COMMIT_SHA_FULL}"
 		printf 'DEMO_NAV2_METRICS_BUILD_ID=%q\n' "${NAV2_METRICS_BUILD_ID}"
 		printf 'DEMO_DEFAULT_REPORT_METRICS_BUILD_ID=%q\n' "${DEFAULT_REPORT_METRICS_BUILD_ID}"
 		printf 'DEMO_ISAAC_SIM_BUILD_ID=%q\n' "${ISAAC_SIM_BUILD_ID}"
 	} >"${STATE_FILE}.new"
 	mv "${STATE_FILE}.new" "${STATE_FILE}"
-	echo "Wrote ${STATE_FILE} (pin for project \"${PROJECT_NAME}\", API ${RESIM_URL}, commit ${COMMIT_SHA})."
+	echo "Wrote ${STATE_FILE} (pin projectID=${pin_project_id}, API ${RESIM_URL}, commit ${COMMIT_SHA})."
 }
 
-# Function to pause execution
+# Optional step-through (uncomment # pause lines). Skipped with --yes / DEMO_ASSUME_YES=1 or non-TTY stdin.
 pause() {
-    echo "Press Enter to continue to the next command..."
-    read -p ""
+	if [[ -n "${DEMO_ASSUME_YES:-}" ]] || ! [[ -t 0 ]]; then
+		return 0
+	fi
+	echo "Press Enter to continue to the next command..."
+	read -r
 }
 
 echo "Signed in to the right ReSim org for ${RESIM_ENV}? (CLI uses RESIM_URL / RESIM_AUTH_URL above.)"
-read -p "Press Enter to continue"
+if [[ -n "${DEMO_ASSUME_YES:-}" ]] || ! [[ -t 0 ]]; then
+	echo "Continuing without confirmation (--yes, DEMO_ASSUME_YES=1, or non-interactive stdin)."
+else
+	read -r -p "Press Enter to continue " || true
+fi
+echo ""
+echo "Starting setup. The next steps call the ReSim API (${RESIM_URL}); the first request can take a while (auth, TLS, cold start)."
 
 # Upsert project and system (CLI has no projects update; existing project is left as-is).
 ensure_project
@@ -368,6 +420,7 @@ fi
 # New git commit => new metrics-builds + new Isaac build. Same commit => reuse IDs from STATE_FILE.
 if [[ "${REGISTERED_BUILDS_REUSED}" -eq 0 ]]; then
 	# Metrics builds before managed test suites so suites that use Nav2 metrics can be created with --metrics-build / --metrics-set.
+	echo "Registering Nav2 metrics-build (metrics-builds create; image ${METRICS_IMAGE})..."
 	_nav2_mb_out="$(
 		resim metrics-builds create --project "${PROJECT_NAME}" \
 			--name "Nav2 Metrics" \
@@ -387,6 +440,7 @@ if [[ "${REGISTERED_BUILDS_REUSED}" -eq 0 ]]; then
 	fi
 	# pause
 
+	echo "Registering default report metrics-build..."
 	_default_rep_out="$(
 		resim metrics-builds create --project "${PROJECT_NAME}" \
 			--name "Default Report Metrics Build" \
@@ -418,6 +472,7 @@ ensure_demo_assets
 
 if [[ "${REGISTERED_BUILDS_REUSED}" -eq 0 ]]; then
 	# Set up the system build (ISAACSIM_IMAGE / NAV2_IMAGE / METRICS_IMAGE from ecr_compose_env.sh)
+	echo "Creating Isaac Sim system build (builds create; ECR images for commit ${COMMIT_SHA})..."
 	_build_out="$(
 		resim builds create --project "${PROJECT_NAME}" --build-spec ./builds/docker-compose.yml \
 			--system "${SYSTEM_NAME}" --name "Isaac Sim Build @ ${COMMIT_SHA}" --description "Isaac Sim Nav2 demo build" \
@@ -433,6 +488,21 @@ if [[ "${REGISTERED_BUILDS_REUSED}" -eq 0 ]]; then
 	save_demo_state
 	# pause
 fi
+
+# Catch stale pins (e.g. build deleted in UI) before test-suites run / metrics sync.
+ensure_isaac_system_build_exists() {
+	[[ -n "${ISAAC_SIM_BUILD_ID:-}" ]] || {
+		echo "demo_in_new_org.sh: ISAAC_SIM_BUILD_ID is empty" >&2
+		exit 1
+	}
+	echo "Verifying system build exists (builds get --build-id ${ISAAC_SIM_BUILD_ID})..."
+	if ! resim builds get --project "${PROJECT_NAME}" --build-id "${ISAAC_SIM_BUILD_ID}" >/dev/null; then
+		echo "demo_in_new_org.sh: system build not found for this project. Try FORCE_NEW_BUILDS=1 or delete ${STATE_FILE}." >&2
+		exit 1
+	fi
+}
+
+ensure_isaac_system_build_exists
 
 run_nav2_experience_batch() {
 	local suite_name="$1"
