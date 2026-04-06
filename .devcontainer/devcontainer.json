@@ -7,8 +7,15 @@
 	"postCreateCommand": "bash -c 'apt update && apt install -y python3-pip python3-virtualenv ros-humble-rosbag2-storage-mcap && source /opt/ros/humble/setup.bash'",
 	"postAttachCommand": "grep -qF 'TAG' $HOME/.bashrc || echo 'source /opt/ros/humble/setup.bash # TAG' >> $HOME/.bashrc",
 
-	// Features to add to the dev container. More info: https://containers.dev/features.
-	// "features": {},
+	// AWS CLI + Docker for scripts/build_and_push.sh (ECR login, build, push).
+	// Rebuild the container after changing this. If builds fail with Docker daemon errors,
+	// try adding: "runArgs": ["--privileged"]
+	"features": {
+		"ghcr.io/devcontainers/features/aws-cli:1": {},
+		"ghcr.io/devcontainers/features/docker-in-docker:2": {
+			"moby": true
+		}
+	},
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
@@ -22,9 +29,9 @@
             "extensions": [
 				"ms-python.python",
 				"charliermarsh.ruff"
-			],
+			]
         }
-    },
+    }
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
 	// "remoteUser": "root"
 }
