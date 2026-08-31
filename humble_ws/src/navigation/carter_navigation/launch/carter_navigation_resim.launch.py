@@ -67,8 +67,8 @@ def namespaced_topic(namespace: str, topic: str) -> str:
 def camera_video_topics(namespace: str) -> dict[str, str]:
     return {
         "raw": namespaced_topic(namespace, "front_stereo_camera/left/image_raw"),
-        "raw_25fps": namespaced_topic(namespace, "front_stereo_camera/left/image_raw_25fps"),
-        "foxglove": namespaced_topic(namespace, "front_stereo_camera/left/image_raw/foxglove"),
+        "raw_10fps": namespaced_topic(namespace, "front_stereo_camera/left/image_raw_10fps"),
+        "compressed": namespaced_topic(namespace, "front_stereo_camera/left/image_raw_10fps/compressed"),
         "nitros_bridge": namespaced_topic(
             namespace, "front_stereo_camera/left/image_raw/nitros_bridge"
         ),
@@ -77,8 +77,8 @@ def camera_video_topics(namespace: str) -> dict[str, str]:
 
 def create_camera_video_pipeline(namespace: str) -> tuple[list[Node], str]:
     topics = camera_video_topics(namespace)
-    camera_25fps_throttler_node = Node(
-        name="camera_25fps_throttler",
+    camera_10fps_throttler_node = Node(
+        name="camera_10fps_throttler",
         package="topic_tools",
         executable="throttle",
         output=NODE_OUTPUT_CONFIG,
@@ -86,37 +86,34 @@ def create_camera_video_pipeline(namespace: str) -> tuple[list[Node], str]:
         arguments=[
             "messages",
             topics["raw"],
-            "25.0",
-            topics["raw_25fps"],
+            "10.0",
+            topics["raw_10fps"],
         ],
     )
-    foxglove_video_republisher_node = Node(
-        name="foxglove_video_republisher",
+    # Republish as JPEG compressed — negligible CPU cost vs H.264.
+    # MP4 encoding is deferred to the metrics container post-run.
+    camera_jpeg_republisher_node = Node(
+        name="camera_jpeg_republisher",
         package="image_transport",
         executable="republish",
         output=NODE_OUTPUT_CONFIG,
         namespace=namespace,
-        arguments=["raw", "foxglove"],
+        arguments=["raw", "compressed"],
         remappings=[
-            ("in", topics["raw_25fps"]),
-            ("out/foxglove", topics["foxglove"]),
+            ("in", topics["raw_10fps"]),
+            ("out/compressed", topics["compressed"]),
         ],
         parameters=[
             {
-                # Foxglove playback requires every frame to be independently decodable.
-                "out.foxglove.gop_size": 1,
-                # All-intra H.264 can still be very large, so bias strongly toward size.
-                "out.foxglove.bit_rate": 12_000_000,
-                "out.foxglove.qmax": 40,
-                "out.foxglove.pixel_format": "yuv420p",
-                "out.foxglove.encoder_av_options": "crf:35,preset:veryfast,tune:zerolatency",
+                "out.compressed.format": "jpeg",
+                "out.compressed.jpeg_quality": 80,
             }
         ],
     )
     exclude_pattern = (
-        f"({topics['raw']}$|{topics['nitros_bridge']}$|{topics['raw_25fps']}$)"
+        f"({topics['raw']}$|{topics['nitros_bridge']}$|{topics['raw_10fps']}$)"
     )
-    return [camera_25fps_throttler_node, foxglove_video_republisher_node], exclude_pattern
+    return [camera_10fps_throttler_node, camera_jpeg_republisher_node], exclude_pattern
 
 
 def resolve_requested_experience_path(context) -> Optional[Path]:

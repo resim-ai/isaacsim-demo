@@ -17,3 +17,6 @@ build_ws/humble
 .#*
 
 __pycache__/
+
+# Local pin for scripts/demo_in_new_org.sh (ReSim build / metrics-build IDs per commit)
+.demo_in_new_org_state

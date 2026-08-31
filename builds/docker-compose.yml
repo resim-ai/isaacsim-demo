@@ -1,3 +1,6 @@
+# Image refs come from the environment (matches CI: short git SHA suffix on each tag).
+# From repo root: source scripts/ecr_compose_env.sh
+# Then: docker compose -f builds/docker-compose.yml ...  OR  resim builds create ... --use-os-env
 services:
   isaacsim:
     image: ${ISAACSIM_IMAGE}
