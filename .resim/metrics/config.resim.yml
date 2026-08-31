@@ -262,7 +262,7 @@ metrics:
     type: batch
     description: All camera videos from scenarios with Lighting = Bright.
     query_string: |
-      SELECT m.experience_name, cv.job_id
+      SELECT m.experience_name, cv.job_id, cv.filename
       FROM camera_video cv
       JOIN metadata m ON cv.job_id = m.job_id
       WHERE contains(m.custom_field_keys, 'Lighting')
@@ -275,7 +275,7 @@ metrics:
     type: batch
     description: All camera videos from scenarios with Lighting = Dim.
     query_string: |
-      SELECT m.experience_name, cv.job_id
+      SELECT m.experience_name, cv.job_id, cv.filename
       FROM camera_video cv
       JOIN metadata m ON cv.job_id = m.job_id
       WHERE contains(m.custom_field_keys, 'Lighting')
@@ -288,7 +288,7 @@ metrics:
     type: batch
     description: All camera videos from scenarios with Lighting = Dark.
     query_string: |
-      SELECT m.experience_name, cv.job_id
+      SELECT m.experience_name, cv.job_id, cv.filename
       FROM camera_video cv
       JOIN metadata m ON cv.job_id = m.job_id
       WHERE contains(m.custom_field_keys, 'Lighting')
